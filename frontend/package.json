@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "setup-env": "node setup-env.js",
+    "predev": "node setup-env.js",
     "dev": "node server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",

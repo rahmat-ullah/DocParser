@@ -42,7 +42,7 @@ class Document(Base):
     ai_summary: Mapped[Optional[str]] = mapped_column(Text)
     
     # Metadata and analysis results
-    metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
+    document_metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
     analysis_results: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, default=dict)
     
     # Processing configuration
@@ -82,7 +82,7 @@ class Document(Base):
             "extracted_text": self.extracted_text,
             "ai_description": self.ai_description,
             "ai_summary": self.ai_summary,
-            "metadata": self.metadata or {},
+            "document_metadata": self.document_metadata or {},
             "analysis_results": self.analysis_results or {},
             "confidence_score": self.confidence_score,
             "ocr_confidence": self.ocr_confidence,

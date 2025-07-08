@@ -37,7 +37,13 @@ class DocumentResponse(BaseModel):
     mime_type: str
     processing_status: str
     created_at: datetime
-    updated_at: datetime
+    updated_at: Optional[datetime] = None
+    user_id: Optional[str] = None
+    processing_started_at: Optional[datetime] = None
+    processing_completed_at: Optional[datetime] = None
+    processing_error: Optional[str] = None
+    extracted_text: Optional[str] = None
+    ai_description: Optional[str] = None
     
     class Config:
         from_attributes = True

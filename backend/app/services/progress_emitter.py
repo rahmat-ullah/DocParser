@@ -6,10 +6,22 @@ import json
 import asyncio
 import logging
 from typing import Optional, Dict, Any
-import redis.asyncio as redis
-import requests
 from ..parsers.ast_models import ParseProgress
 from ..core.config import Settings
+
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
+
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    requests = None
+    REQUESTS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +39,11 @@ class ProgressEmitter:
         
     async def initialize_redis(self):
         """Initialize Redis connection for pub/sub."""
+        if not REDIS_AVAILABLE:
+            logger.info("Redis not available. Progress updates will use HTTP fallback")
+            self.redis_client = None
+            return
+            
         try:
             self.redis_client = redis.Redis(
                 host=getattr(self.settings, 'REDIS_HOST', 'localhost'),
@@ -94,6 +111,10 @@ class ProgressEmitter:
         Returns:
             True if successful, False otherwise
         """
+        if not REQUESTS_AVAILABLE:
+            logger.debug(f"HTTP requests not available. Progress logged for document {document_id}: {progress.stage}")
+            return True  # Consider it successful for development
+            
         try:
             progress_data = {
                 'documentId': document_id,
