@@ -59,8 +59,10 @@ class AIService:
     
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
-        if not self.config.get("api_key"):
-            raise AIServiceError("OpenAI API key is required")
+        api_key = self.config.get("api_key", "")
+        if not api_key or api_key == "your_openai_api_key_here":
+            logger.warning("OpenAI API key not configured. AI features will be limited.")
+            # Don't raise error for development
         
         if not self.config.get("vision_model"):
             raise AIServiceError("Vision model is required")
@@ -213,19 +215,26 @@ class AIService:
         }
         
         # Check OpenAI API connectivity
-        try:
-            # Simple API call to check connectivity
-            response = await self.client.models.list()
+        api_key = self.config.get("api_key", "")
+        if not api_key or api_key == "your_openai_api_key_here":
             status["checks"]["openai_api"] = {
-                "status": "healthy",
-                "message": "API connection successful"
+                "status": "not_configured",
+                "message": "OpenAI API key not configured"
             }
-        except Exception as e:
-            status["status"] = "unhealthy"
-            status["checks"]["openai_api"] = {
-                "status": "unhealthy",
-                "message": f"API connection failed: {e}"
-            }
+        else:
+            try:
+                # Simple API call to check connectivity
+                response = await self.client.models.list()
+                status["checks"]["openai_api"] = {
+                    "status": "healthy",
+                    "message": "API connection successful"
+                }
+            except Exception as e:
+                status["status"] = "unhealthy"
+                status["checks"]["openai_api"] = {
+                    "status": "unhealthy",
+                    "message": f"API connection failed: {e}"
+                }
         
         # Check OCR availability if enabled
         if self.config.get("ocr_fallback_enabled", True):

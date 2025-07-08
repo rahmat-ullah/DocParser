@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     tesseract_path: Optional[str] = Field(default=None, description="Path to Tesseract executable")
     
     # CORS settings
-    cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://localhost:3001"], 
-        description="Allowed CORS origins"
+    cors_origins: str = Field(
+        default="http://localhost:3000,http://localhost:3001", 
+        description="Allowed CORS origins (comma-separated)"
     )
     
     # Upload settings
@@ -60,42 +60,54 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", description="Logging level")
     log_file: str = Field(default="logs/app.log", description="Log file path")
     
-    @validator('cors_origins', pre=True)
+    @field_validator('cors_origins', mode='before')
+    @classmethod
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(',')]
+            return v.strip()
         return v
     
-    @validator('allowed_file_types', pre=True)
+    def get_cors_origins_list(self) -> List[str]:
+        """Get CORS origins as a list."""
+        if isinstance(self.cors_origins, str):
+            return [origin.strip() for origin in self.cors_origins.split(',')]
+        return self.cors_origins
+    
+    @field_validator('allowed_file_types', mode='before')
+    @classmethod
     def parse_allowed_file_types(cls, v):
         """Parse allowed file types from string or list."""
         if isinstance(v, str):
             return [ext.strip() for ext in v.split(',')]
         return v
     
-    @validator('temp_dir', 'upload_dir', pre=True)
+    @field_validator('temp_dir', 'upload_dir', mode='before')
+    @classmethod
     def create_directories(cls, v):
         """Ensure directories exist."""
         path = Path(v)
         path.mkdir(parents=True, exist_ok=True)
         return str(path)
     
-    @validator('log_file', pre=True)
+    @field_validator('log_file', mode='before')
+    @classmethod
     def create_log_directory(cls, v):
         """Ensure log directory exists."""
         log_path = Path(v)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         return str(log_path)
     
-    @validator('openai_api_key')
+    @field_validator('openai_api_key')
+    @classmethod
     def validate_openai_key(cls, v):
         """Validate OpenAI API key format."""
-        if v and not v.startswith(('sk-', 'sk-proj-')):
+        if v and v != "your_openai_api_key_here" and not v.startswith(('sk-', 'sk-proj-')):
             raise ValueError("OpenAI API key must start with 'sk-' or 'sk-proj-'")
         return v
     
-    @validator('max_upload_size')
+    @field_validator('max_upload_size')
+    @classmethod
     def validate_upload_size(cls, v):
         """Validate upload size is reasonable."""
         if v > 100 * 1024 * 1024:  # 100MB
@@ -146,7 +158,7 @@ def get_openai_config() -> dict:
 def get_cors_config() -> dict:
     """Get CORS configuration."""
     return {
-        "allow_origins": settings.cors_origins,
+        "allow_origins": settings.get_cors_origins_list(),
         "allow_credentials": True,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["*"],

@@ -30,7 +30,7 @@ class DocumentProcessor:
         file_path: Path, 
         document_id: str,
         enable_ai_processing: bool = True
-    ) -> AsyncGenerator[ParseProgress, str]:
+    ) -> AsyncGenerator[ParseProgress, None]:
         """
         Process a document through the complete pipeline.
         
@@ -40,10 +40,8 @@ class DocumentProcessor:
             enable_ai_processing: Whether to use AI for image/math processing
             
         Yields:
-            ParseProgress objects indicating processing status
-            
-        Returns:
-            Final Markdown content as string
+            ParseProgress objects indicating processing status.
+            The final progress object will contain the result in its `result` attribute.
         """
         try:
             # Stage 1: Initialize and validate
@@ -141,8 +139,6 @@ class DocumentProcessor:
             completion_progress.result = markdown_content
             await emit_document_progress(document_id, completion_progress)
             yield completion_progress
-
-            return markdown_content
 
         except Exception as e:
             progress = ParseProgress(
