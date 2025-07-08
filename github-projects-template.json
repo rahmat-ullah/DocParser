@@ -1,0 +1,72 @@
+{
+  "project": {
+    "title": "Frontend Refactor - Document Parser",
+    "description": "Comprehensive frontend refactor to improve code quality, performance, and maintainability",
+    "columns": [
+      {
+        "name": "Backlog",
+        "description": "Tasks ready for development"
+      },
+      {
+        "name": "In Progress",
+        "description": "Currently being worked on"
+      },
+      {
+        "name": "Review",
+        "description": "Awaiting code review"
+      },
+      {
+        "name": "Testing",
+        "description": "In testing phase"
+      },
+      {
+        "name": "Done",
+        "description": "Completed tasks"
+      }
+    ],
+    "epics": [
+      {
+        "title": "Epic 1: Project Setup & CI/CD",
+        "status": "In Progress",
+        "items": [
+          {
+            "title": "Create feat/frontend-refactor branch from main",
+            "status": "Done",
+            "assignee": "AI Agent",
+            "labels": ["setup", "git"]
+          },
+          {
+            "title": "Set up GitHub Actions CI pipeline",
+            "status": "Done",
+            "assignee": "AI Agent",
+            "labels": ["ci/cd", "github-actions"]
+          },
+          {
+            "title": "Configure ESLint, TypeScript, and Jest",
+            "status": "Done",
+            "assignee": "AI Agent",
+            "labels": ["tooling", "testing"]
+          },
+          {
+            "title": "Add pre-commit hooks",
+            "status": "Done",
+            "assignee": "AI Agent",
+            "labels": ["tooling", "quality"]
+          },
+          {
+            "title": "Set up code coverage reporting",
+            "status": "Backlog",
+            "assignee": "TBD",
+            "labels": ["testing", "reporting"]
+          },
+          {
+            "title": "Configure automated dependency updates",
+            "status": "Backlog",
+            "assignee": "TBD",
+            "labels": ["automation", "security"]
+          }
+        ]
+      }
+    ]
+  }
+}
