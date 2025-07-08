@@ -5,6 +5,8 @@ import { History, Search, Trash2, FileText, Calendar, HardDrive, X } from 'lucid
 import { ParsedDocument } from '@/types/document';
 import { DocumentHistoryManager } from '@/lib/documentHistory';
 import { cn } from '@/lib/utils';
+import { Sidebar, SidebarHeader, SidebarTitle, SidebarContent, SidebarItem } from '@/components/ui/sidebar';
+import { IconButton } from '@/components/ui/icon-button';
 
 interface DocumentHistoryProps {
   onDocumentSelect: (document: ParsedDocument) => void;
@@ -87,22 +89,21 @@ export function DocumentHistory({
     if (type.includes('sheet') || type.includes('excel')) return <FileText className="w-4 h-4 text-green-500" />;
     if (type.includes('presentation')) return <FileText className="w-4 h-4 text-orange-500" />;
     if (type.includes('image')) return <FileText className="w-4 h-4 text-purple-500" />;
-    return <FileText className="w-4 h-4 text-gray-500" />;
+    return <FileText className="w-4 h-4 text-muted-foreground" />;
   };
 
   return (
-    <div className={cn('flex flex-col h-full bg-white border-r border-gray-200', className)}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
+    <Sidebar className={className}>
+      <SidebarHeader>
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <History className="w-5 h-5 text-gray-600" />
-            <h2 className="text-lg font-semibold text-gray-900">History</h2>
+            <History className="w-5 h-5 text-muted-foreground" />
+            <SidebarTitle>History</SidebarTitle>
           </div>
           {documents.length > 0 && (
             <button
               onClick={handleClearHistory}
-              className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
             >
               Clear All
             </button>
@@ -111,31 +112,31 @@ export function DocumentHistory({
         
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            className="w-full pl-10 pr-10 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent text-sm"
           />
           {searchTerm && (
-            <button
+            <IconButton
+              icon={<X className="w-4 h-4" />}
               onClick={clearSearch}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              variant="ghost"
+              size="xs"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2"
               aria-label="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            />
           )}
         </div>
-      </div>
+      </SidebarHeader>
 
-      {/* Document List */}
-      <div className="flex-1 overflow-auto">
+      <SidebarContent>
         {filteredDocuments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
-            <History className="w-12 h-12 mb-4 text-gray-300" />
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+            <History className="w-12 h-12 mb-4 text-muted-foreground/50" />
             <p className="text-center">
               {searchTerm ? 'No documents found' : 'No documents yet'}
             </p>
@@ -146,51 +147,48 @@ export function DocumentHistory({
         ) : (
           <div className="p-2">
             {filteredDocuments.map((document) => (
-              <div
+              <SidebarItem
                 key={document.id}
-                className={cn(
-                  'group flex items-start space-x-3 p-3 rounded-lg cursor-pointer transition-all duration-200 mb-2',
-                  selectedDocument?.id === document.id 
-                    ? 'bg-primary/10 border border-primary/20' 
-                    : 'hover:bg-gray-50 border border-transparent'
-                )}
+                active={selectedDocument?.id === document.id}
                 onClick={() => onDocumentSelect(document)}
+                className="group flex items-start space-x-3 mb-2"
               >
                 <div className="flex-shrink-0 mt-1">
                   {getFileIcon(document.metadata.type)}
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate text-sm">
+                  <p className="font-medium text-foreground truncate text-sm">
                     {document.metadata.name}
                   </p>
                   <div className="flex flex-col space-y-1 mt-1">
-                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                       <Calendar className="w-3 h-3" />
                       <span>{formatDate(document.metadata.uploadDate)}</span>
                     </div>
-                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                       <HardDrive className="w-3 h-3" />
                       <span>{formatFileSize(document.metadata.size)}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {document.sections.length} sections
                   </p>
                 </div>
                 
-                <button
+                <IconButton
+                  icon={<Trash2 className="w-4 h-4" />}
                   onClick={(e) => handleRemoveDocument(document.id, e)}
-                  className="flex-shrink-0 p-1 hover:bg-gray-200 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                  variant="ghost"
+                  size="xs"
+                  className="opacity-0 group-hover:opacity-100 hover:text-destructive"
                   aria-label="Remove document"
-                >
-                  <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
-                </button>
-              </div>
+                />
+              </SidebarItem>
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </SidebarContent>
+    </Sidebar>
   );
 }

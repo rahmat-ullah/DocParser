@@ -35,4 +35,6 @@ export interface ParsingProgress {
   stage: 'uploading' | 'parsing' | 'converting' | 'complete';
   progress: number;
   message: string;
+  documentId?: string;
+  timestamp?: string;
 }

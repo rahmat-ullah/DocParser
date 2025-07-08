@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Upload, File, X, FileText, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { IconButton } from '@/components/ui/icon-button';
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -71,7 +72,7 @@ export function FileUpload({ onFileSelect, isProcessing, className }: FileUpload
           'hover:border-primary/50 hover:bg-primary/5',
           dragActive && 'border-primary bg-primary/10',
           isProcessing && 'pointer-events-none opacity-50',
-          'border-gray-300'
+          'border-border'
         )}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -88,37 +89,38 @@ export function FileUpload({ onFileSelect, isProcessing, className }: FileUpload
         
         {selectedFile ? (
           <div className="flex flex-col items-center space-y-4">
-            <div className="flex items-center space-x-3 bg-white rounded-lg p-4 shadow-sm border max-w-full">
+            <div className="flex items-center space-x-3 bg-background rounded-lg p-4 shadow-sm border max-w-full">
               {getFileIcon(selectedFile)}
               <div className="flex-1 text-left min-w-0">
-                <p className="font-medium text-gray-900 truncate">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500">{formatFileSize(selectedFile.size)}</p>
+                <p className="font-medium text-foreground truncate">{selectedFile.name}</p>
+                <p className="text-sm text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
               </div>
-              <button
+              <IconButton
+                icon={<X className="w-4 h-4" />}
                 onClick={clearFile}
                 disabled={isProcessing}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
+                variant="ghost"
+                size="xs"
+                className="flex-shrink-0 hover:text-destructive"
                 aria-label="Remove file"
-              >
-                <X className="w-4 h-4 text-gray-500" />
-              </button>
+              />
             </div>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               {isProcessing ? 'Processing...' : 'File ready for processing'}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            <Upload className="w-12 h-12 text-gray-400 mx-auto" />
+            <Upload className="w-12 h-12 text-muted-foreground mx-auto" />
             <div>
-              <p className="text-lg md:text-xl font-medium text-gray-900">
+              <p className="text-lg md:text-xl font-medium text-foreground">
                 Drop your document here
               </p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 or click to browse files
               </p>
             </div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-muted-foreground">
               Supports: PDF, DOCX, XLSX, PPT, TXT, PNG, JPG (max 10MB)
             </div>
           </div>

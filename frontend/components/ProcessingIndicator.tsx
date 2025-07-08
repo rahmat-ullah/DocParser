@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { ParsingProgress } from '@/types/document';
 import { cn } from '@/lib/utils';
+import { useSocketProgress } from '@/hooks/useSocketProgress';
 
 interface ProcessingIndicatorProps {
   progress: ParsingProgress;
@@ -12,25 +13,40 @@ interface ProcessingIndicatorProps {
 
 export function ProcessingIndicator({ progress, className }: ProcessingIndicatorProps) {
   const [displayedProgress, setDisplayedProgress] = useState(0);
+  const [currentProgress, setCurrentProgress] = useState(progress);
+
+  // Use Socket.IO hook for real-time updates
+  const { lastProgress, isConnected } = useSocketProgress({
+    documentId: progress.documentId,
+    onProgress: (data) => {
+      setCurrentProgress(data);
+      setDisplayedProgress(data.progress);
+    },
+    autoConnect: !!progress.documentId
+  });
 
   useEffect(() => {
-    // Smooth progress animation
-    const interval = setInterval(() => {
-      setDisplayedProgress(prev => {
-        const diff = progress.progress - prev;
-        if (Math.abs(diff) < 1) {
-          clearInterval(interval);
-          return progress.progress;
-        }
-        return prev + diff * 0.1;
-      });
-    }, 50);
+    if (!progress.documentId || !isConnected) {
+      // Fallback to smooth progress animation if no documentId or not connected
+      const interval = setInterval(() => {
+        setDisplayedProgress(prev => {
+          const diff = progress.progress - prev;
+          if (Math.abs(diff) < 1) {
+            clearInterval(interval);
+            return progress.progress;
+          }
+          return prev + diff * 0.1;
+        });
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [progress.progress, progress.documentId, isConnected]);
 
-    return () => clearInterval(interval);
-  }, [progress.progress]);
+  // Use real-time progress if available, otherwise use prop progress
+  const activeProgress = lastProgress || currentProgress;
 
   const getStageIcon = () => {
-    switch (progress.stage) {
+    switch (activeProgress.stage) {
       case 'complete':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'uploading':
@@ -43,7 +59,7 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
   };
 
   const getStageColor = () => {
-    switch (progress.stage) {
+    switch (activeProgress.stage) {
       case 'complete':
         return 'bg-green-500';
       case 'uploading':
@@ -53,12 +69,12 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
       case 'converting':
         return 'bg-purple-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-muted-foreground';
     }
   };
 
   const getStageText = () => {
-    switch (progress.stage) {
+    switch (activeProgress.stage) {
       case 'uploading':
         return 'Uploading file...';
       case 'parsing':
@@ -73,18 +89,18 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
   };
 
   return (
-    <div className={cn('bg-white rounded-lg border border-gray-200 p-6 shadow-sm', className)}>
+    <div className={cn('bg-background rounded-lg border border-border p-6 shadow-sm', className)}>
       <div className="flex items-center space-x-4 mb-4">
         {getStageIcon()}
         <div className="flex-1">
-          <h3 className="font-medium text-gray-900">{getStageText()}</h3>
-          <p className="text-sm text-gray-600">{progress.message}</p>
+          <h3 className="font-medium text-foreground">{getStageText()}</h3>
+          <p className="text-sm text-muted-foreground">{activeProgress.message}</p>
         </div>
       </div>
       
       {/* Progress Bar */}
       <div className="relative">
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-muted rounded-full h-2">
           <div
             className={cn(
               'h-2 rounded-full transition-all duration-300 ease-out',
@@ -93,7 +109,7 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
             style={{ width: `${displayedProgress}%` }}
           />
         </div>
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-xs text-muted-foreground mt-1">
           <span>0%</span>
           <span className="font-medium">{Math.round(displayedProgress)}%</span>
           <span>100%</span>
@@ -112,17 +128,17 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
             key={stage.key}
             className={cn(
               'flex flex-col items-center space-y-1',
-              progress.stage === stage.key ? 'text-primary' : 'text-gray-400'
+              activeProgress.stage === stage.key ? 'text-primary' : 'text-muted-foreground'
             )}
           >
             <div
               className={cn(
                 'w-3 h-3 rounded-full border-2 transition-colors',
-                progress.stage === stage.key 
+                activeProgress.stage === stage.key 
                   ? 'border-primary bg-primary' 
-                  : index < ['uploading', 'parsing', 'converting', 'complete'].indexOf(progress.stage)
+                  : index < ['uploading', 'parsing', 'converting', 'complete'].indexOf(activeProgress.stage)
                   ? 'border-green-500 bg-green-500'
-                  : 'border-gray-300 bg-white'
+                  : 'border-border bg-background'
               )}
             />
             <span className="text-xs font-medium">{stage.label}</span>

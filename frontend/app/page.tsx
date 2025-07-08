@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { FileText, ChevronLeft, ChevronRight, Settings, HelpCircle, Menu } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { ParsedDocument, DocumentSection, ParsingProgress } from '@/types/document';
+import { ParsedDocument, DocumentSection } from '@/types/document';
+import { useUploadStore } from '@/hooks/useUploadStore';
+import { useDocumentHistoryQuery, useUpdateDocumentMutation } from '@/hooks/useDocumentQuery';
 import { DocumentParser } from '@/lib/documentParser';
 import { DocumentHistoryManager } from '@/lib/documentHistory';
 import { FileUpload } from '@/components/FileUpload';
@@ -11,20 +13,34 @@ import { DocumentViewer } from '@/components/DocumentViewer';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { DocumentHistory } from '@/components/DocumentHistory';
 import { ProcessingIndicator } from '@/components/ProcessingIndicator';
+import { DocumentSuspense } from '@/components/DocumentSuspense';
+import { IconButton } from '@/components/ui/icon-button';
 import { cn } from '@/lib/utils';
 
 export default function Home() {
-  const [currentDocument, setCurrentDocument] = useState<ParsedDocument | null>(null);
-  const [selectedSection, setSelectedSection] = useState<DocumentSection | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState<ParsingProgress>({
-    stage: 'uploading',
-    progress: 0,
-    message: 'Initializing...'
-  });
-  const [showHistory, setShowHistory] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  // Zustand store for UI state management
+  const {
+    currentDocument,
+    selectedSection,
+    isProcessing,
+    processingProgress,
+    showHistory,
+    showSettings,
+    isMobile,
+    setCurrentDocument,
+    setSelectedSection,
+    setIsProcessing,
+    setProcessingProgress,
+    setShowHistory,
+    setIsMobile,
+    toggleHistory,
+    toggleSettings,
+    selectDocumentWithSection
+  } = useUploadStore();
+
+  // React Query hooks for data management
+  const { data: documentHistory, addDocumentToHistory } = useDocumentHistoryQuery();
+  const updateDocumentMutation = useUpdateDocumentMutation();
 
   // Check for mobile viewport
   useEffect(() => {
@@ -38,7 +54,7 @@ export default function Home() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [setIsMobile, setShowHistory]);
 
   const handleFileSelect = async (file: File) => {
     setIsProcessing(true);
@@ -61,12 +77,12 @@ export default function Home() {
         }));
       });
 
-      setCurrentDocument(document);
-      setSelectedSection(document.sections[0] || null);
+      selectDocumentWithSection(document);
 
-      // Add to history
+      // Add to history using both legacy and React Query
       const historyManager = DocumentHistoryManager.getInstance();
       historyManager.addDocument(document);
+      addDocumentToHistory(document);
       
       setProcessingProgress({
         stage: 'complete',
@@ -87,6 +103,13 @@ export default function Home() {
 
   const handleMarkdownChange = (markdown: string) => {
     if (currentDocument) {
+      // Use optimistic UI with React Query mutation
+      updateDocumentMutation.mutate({
+        fileId: currentDocument.id,
+        updates: { markdownContent: markdown }
+      });
+      
+      // Also update Zustand store immediately for UI responsiveness
       setCurrentDocument({
         ...currentDocument,
         markdownContent: markdown
@@ -95,11 +118,7 @@ export default function Home() {
   };
 
   const handleDocumentSelect = (document: ParsedDocument) => {
-    setCurrentDocument(document);
-    setSelectedSection(document.sections[0] || null);
-    if (isMobile) {
-      setShowHistory(false);
-    }
+    selectDocumentWithSection(document);
   };
 
   const handleSectionSelect = (section: DocumentSection) => {
@@ -113,7 +132,7 @@ export default function Home() {
         switch (e.key) {
           case 'h':
             e.preventDefault();
-            setShowHistory(!showHistory);
+            toggleHistory();
             break;
           case 's':
             e.preventDefault();
@@ -121,7 +140,7 @@ export default function Home() {
             break;
           case ',':
             e.preventDefault();
-            setShowSettings(!showSettings);
+            toggleSettings();
             break;
         }
       }
@@ -129,53 +148,47 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showHistory, showSettings]);
+  }, [toggleHistory, toggleSettings]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-secondary flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex-shrink-0">
+      <header className="bg-secondary border-b border-border px-4 md:px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-2">
               <FileText className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-              <h1 className="text-xl md:text-2xl font-bold text-gray-900">DocParser</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">DocParser</h1>
             </div>
-            <div className="hidden md:block text-sm text-gray-500 ml-4">
+            <div className="hidden md:block text-sm text-muted-foreground ml-4">
               Convert documents to markdown with ease
             </div>
           </div>
           
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={cn(
-                'p-2 rounded-lg transition-colors',
-                showHistory ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'
-              )}
-              aria-label="Toggle history sidebar"
-            >
-              {isMobile ? (
+            <IconButton
+              icon={isMobile ? (
                 <Menu className="w-5 h-5" />
               ) : showHistory ? (
                 <ChevronLeft className="w-5 h-5" />
               ) : (
                 <ChevronRight className="w-5 h-5" />
               )}
-            </button>
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => toggleHistory()}
+              variant={showHistory ? 'default' : 'ghost'}
+              aria-label="Toggle history sidebar"
+            />
+            <IconButton
+              icon={<Settings className="w-5 h-5" />}
+              onClick={() => toggleSettings()}
+              variant="ghost"
               aria-label="Settings"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-            <button 
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            />
+            <IconButton
+              icon={<HelpCircle className="w-5 h-5" />}
+              variant="ghost"
               aria-label="Help"
-            >
-              <HelpCircle className="w-5 h-5" />
-            </button>
+            />
           </div>
         </div>
       </header>
@@ -192,26 +205,28 @@ export default function Home() {
                 maxSize={isMobile ? 100 : 40}
                 className={cn(
                   'transition-all duration-300 ease-in-out',
-                  isMobile && 'absolute inset-0 z-50 bg-white'
+                  isMobile && 'absolute inset-0 z-50 bg-background'
                 )}
               >
-                <DocumentHistory
-                  onDocumentSelect={handleDocumentSelect}
-                  selectedDocument={currentDocument}
-                  className="h-full"
-                />
+                <DocumentSuspense>
+                  <DocumentHistory
+                    onDocumentSelect={handleDocumentSelect}
+                    selectedDocument={currentDocument}
+                    className="h-full"
+                  />
+                </DocumentSuspense>
                 {isMobile && (
-                  <button
+                  <IconButton
+                    icon={<ChevronLeft className="w-5 h-5" />}
                     onClick={() => setShowHistory(false)}
-                    className="absolute top-4 right-4 p-2 bg-gray-100 rounded-lg"
+                    variant="secondary"
+                    className="absolute top-4 right-4"
                     aria-label="Close history"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
+                  />
                 )}
               </Panel>
               {!isMobile && (
-                <PanelResizeHandle className="w-2 bg-gray-200 hover:bg-gray-300 transition-colors cursor-col-resize" />
+                <PanelResizeHandle className="w-2 bg-border hover:bg-muted transition-colors cursor-col-resize" />
               )}
             </>
           )}
@@ -224,10 +239,10 @@ export default function Home() {
                 <div className="flex-1 flex items-center justify-center p-4 md:p-8">
                   <div className="max-w-2xl w-full">
                     <div className="text-center mb-8">
-                      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                      <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
                         Transform Documents into Markdown
                       </h2>
-                      <p className="text-base md:text-lg text-gray-600 mb-8">
+                      <p className="text-base md:text-lg text-muted-foreground mb-8">
                         Upload your documents and convert them to clean, structured markdown format
                       </p>
                     </div>
@@ -253,31 +268,35 @@ export default function Home() {
                 <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full">
                   {/* Document Viewer */}
                   <Panel defaultSize={50} minSize={30}>
-                    <DocumentViewer
-                      document={currentDocument}
-                      selectedSection={selectedSection}
-                      onSectionSelect={handleSectionSelect}
-                      className="h-full"
-                    />
+                    <DocumentSuspense>
+                      <DocumentViewer
+                        document={currentDocument}
+                        selectedSection={selectedSection}
+                        onSectionSelect={handleSectionSelect}
+                        className="h-full"
+                      />
+                    </DocumentSuspense>
                   </Panel>
 
                   {/* Resizable Handle */}
                   <PanelResizeHandle 
                     className={cn(
-                      "bg-gray-200 hover:bg-gray-300 transition-colors",
+                      "bg-border hover:bg-muted transition-colors",
                       isMobile ? "h-2 cursor-row-resize" : "w-2 cursor-col-resize"
                     )}
                   />
 
                   {/* Markdown Editor */}
                   <Panel defaultSize={50} minSize={30}>
-                    <MarkdownEditor
-                      document={currentDocument}
-                      selectedSection={selectedSection}
-                      onMarkdownChange={handleMarkdownChange}
-                      onSectionSelect={handleSectionSelect}
-                      className="h-full"
-                    />
+                    <DocumentSuspense>
+                      <MarkdownEditor
+                        document={currentDocument}
+                        selectedSection={selectedSection}
+                        onMarkdownChange={handleMarkdownChange}
+                        onSectionSelect={handleSectionSelect}
+                        className="h-full"
+                      />
+                    </DocumentSuspense>
                   </Panel>
                 </PanelGroup>
               )}
@@ -287,8 +306,8 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 px-4 md:px-6 py-3 flex-shrink-0">
-        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-gray-500 space-y-2 md:space-y-0">
+      <footer className="bg-background border-t border-border px-4 md:px-6 py-3 flex-shrink-0">
+        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-muted-foreground space-y-2 md:space-y-0">
           <div className="flex items-center space-x-4">
             <span>DocParser v1.0</span>
             <span className="hidden md:inline">•</span>

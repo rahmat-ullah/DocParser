@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, ZoomIn, ZoomOut, RotateCw, X } from 'lucide-react';
 import { ParsedDocument, DocumentSection } from '@/types/document';
 import { cn } from '@/lib/utils';
+import { Panel, PanelHeader, PanelContent } from '@/components/ui/panel';
+import { IconButton } from '@/components/ui/icon-button';
 
 interface DocumentViewerProps {
   document: ParsedDocument | null;
@@ -54,7 +56,7 @@ export function DocumentViewer({
   const renderContent = () => {
     if (!document) {
       return (
-        <div className="flex items-center justify-center h-full text-gray-500">
+        <div className="flex items-center justify-center h-full text-muted-foreground">
           <div className="text-center">
             <p className="text-lg mb-2">No document selected</p>
             <p className="text-sm">Upload a document to get started</p>
@@ -78,15 +80,15 @@ export function DocumentViewer({
                 'cursor-pointer p-3 rounded-lg border transition-all duration-200',
                 selectedSection?.id === section.id 
                   ? 'border-primary bg-primary/10 shadow-sm' 
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                  : 'border-border hover:border-border/80 hover:bg-accent/50'
               )}
               onClick={() => onSectionSelect(section)}
             >
-              <h3 className="font-medium text-gray-900 mb-2 text-sm md:text-base">
+              <h3 className="font-medium text-foreground mb-2 text-sm md:text-base">
                 {section.title}
               </h3>
               <div 
-                className="text-gray-700 text-xs md:text-sm leading-relaxed"
+                className="text-muted-foreground text-xs md:text-sm leading-relaxed"
                 dangerouslySetInnerHTML={{ 
                   __html: searchTerm ? highlightText(section.content, searchTerm) : section.content 
                 }}
@@ -99,15 +101,15 @@ export function DocumentViewer({
   };
 
   return (
-    <div className={cn('flex flex-col h-full bg-white border-r border-gray-200', className)}>
+    <Panel className={cn('flex flex-col h-full border-r', className)} variant="ghost" padding="none">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-gray-200 space-y-3 md:space-y-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-border space-y-3 md:space-y-0">
         <div className="flex items-center space-x-4 min-w-0">
-          <h2 className="text-lg font-semibold text-gray-900 truncate">
+          <h2 className="text-lg font-semibold text-foreground truncate">
             {document?.metadata.name || 'Document Viewer'}
           </h2>
           {document && (
-            <span className="text-sm text-gray-500 flex-shrink-0">
+            <span className="text-sm text-muted-foreground flex-shrink-0">
               {document.sections.length} sections
             </span>
           )}
@@ -115,61 +117,58 @@ export function DocumentViewer({
         
         {/* Controls */}
         <div className="flex items-center space-x-2">
-          <button
+          <IconButton
+            icon={<Search className="w-4 h-4" />}
             onClick={() => setShowSearch(!showSearch)}
-            className={cn(
-              'p-2 rounded-lg transition-colors',
-              showSearch ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'
-            )}
+            variant={showSearch ? 'default' : 'ghost'}
             aria-label="Toggle search"
-          >
-            <Search className="w-4 h-4" />
-          </button>
+          />
           
           {/* Zoom Controls */}
-          <div className="flex items-center space-x-1 border border-gray-300 rounded-lg">
-            <button
+          <div className="flex items-center space-x-1 border border-border rounded-lg">
+            <IconButton
+              icon={<ZoomOut className="w-4 h-4" />}
               onClick={() => setZoom(Math.max(50, zoom - 10))}
-              className="p-2 hover:bg-gray-100 rounded-l-lg"
+              variant="ghost"
+              className="rounded-r-none border-r border-border"
               aria-label="Zoom out"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="px-2 py-1 text-sm font-medium border-x border-gray-300 min-w-[50px] text-center">
+            />
+            <span className="px-2 py-1 text-sm font-medium text-foreground min-w-[50px] text-center">
               {zoom}%
             </span>
-            <button
+            <IconButton
+              icon={<ZoomIn className="w-4 h-4" />}
               onClick={() => setZoom(Math.min(200, zoom + 10))}
-              className="p-2 hover:bg-gray-100 rounded-r-lg"
+              variant="ghost"
+              className="rounded-l-none border-l border-border"
               aria-label="Zoom in"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
+            />
           </div>
         </div>
       </div>
 
       {/* Search Bar */}
       {showSearch && (
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="p-4 border-b border-border bg-muted/50">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search in document..."
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full pl-10 pr-10 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent"
               autoFocus
             />
             {searchTerm && (
-              <button
+              <IconButton
+                icon={<X className="w-4 h-4" />}
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                variant="ghost"
+                size="xs"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2"
                 aria-label="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              />
             )}
           </div>
         </div>
@@ -179,6 +178,6 @@ export function DocumentViewer({
       <div className="flex-1 overflow-auto">
         {renderContent()}
       </div>
-    </div>
+    </Panel>
   );
 }
