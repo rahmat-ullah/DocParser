@@ -1,0 +1,23 @@
+# Global code owners
+* @frontend-team
+
+# Frontend specific
+frontend/ @frontend-team @ui-team
+frontend/components/ @ui-team
+frontend/lib/ @backend-team @frontend-team
+frontend/types/ @backend-team @frontend-team
+
+# CI/CD and configuration
+.github/ @devops-team @frontend-team
+*.yml @devops-team
+*.yaml @devops-team
+*.json @frontend-team
+*.config.* @frontend-team
+
+# Documentation
+*.md @frontend-team @docs-team
+TASK_BOARD.md @project-leads
+
+# Security sensitive files
+.env* @security-team @devops-team
+**/auth* @security-team @backend-team
