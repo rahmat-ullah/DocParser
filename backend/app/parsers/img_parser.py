@@ -14,7 +14,7 @@ import os
 from .base_parser import BaseParser, ParseError
 from .ast_models import DocumentAST, ImageBlock, TableBlock, ParseProgress
 from ..utils.markdown_utils import parse_markdown_table_to_table_block # Changed to relative import
-from backend.app.core.config import settings # For API key
+from ..core.config import settings # For API key
 
 # Ensure OPENAI_API_KEY is loaded for the module
 # This might be better handled if settings are passed down or globally accessible
