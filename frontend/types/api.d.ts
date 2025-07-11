@@ -30,6 +30,7 @@ const ParsedDocumentSchema = z.object({
   metadata: DocumentMetadataSchema,
   originalContent: z.string(),
   markdownContent: z.string(),
+  markdownUrl: z.string().optional(),
   sections: z.array(DocumentSectionSchema),
 });
 

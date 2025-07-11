@@ -12,6 +12,7 @@ from ..parsers.ai_processor import AIProcessor
 from ..parsers.markdown_generator import MarkdownGenerator
 from ..parsers.ast_models import DocumentAST, ParseProgress
 from .progress_emitter import emit_document_progress
+from ..core.config import settings
 
 
 class DocumentProcessor:
@@ -125,6 +126,12 @@ class DocumentProcessor:
 
             markdown_content = self.markdown_generator.generate(ast)
             
+            # Save markdown file
+            output_dir = Path(settings.markdown_dir) / document_id
+            output_dir.mkdir(parents=True, exist_ok=True)
+            md_path = output_dir / f"{file_path.stem}.md"
+            md_path.write_text(markdown_content, encoding="utf-8")
+            
             # Stage 5: Complete
             completion_progress = ParseProgress(
                 stage="completion",
@@ -132,7 +139,8 @@ class DocumentProcessor:
                 message="Document processing completed",
                 details={
                     "output_length": len(markdown_content),
-                    "total_elements": len(ast.textBlocks) + len(ast.images) + len(ast.tables) + len(ast.math)
+                    "total_elements": len(ast.textBlocks) + len(ast.images) + len(ast.tables) + len(ast.math),
+                    "markdown_path": str(md_path)
                 }
             )
             # Add the result to the progress object

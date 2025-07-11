@@ -181,11 +181,14 @@ export function MarkdownEditor({
   };
 
   return (
-    <div className={cn(
-      'flex flex-col h-full bg-white',
-      isFullscreen && 'fixed inset-0 z-50',
-      className
-    )}>
+    <div 
+      className={cn(
+        'flex flex-col h-full bg-white',
+        isFullscreen && 'fixed inset-0 z-50',
+        className
+      )}
+      data-testid="markdown-viewer-pane"
+    >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between p-4 border-b border-gray-200 space-y-3 md:space-y-0">
         <div className="flex items-center space-x-4 min-w-0">
@@ -246,6 +249,21 @@ export function MarkdownEditor({
           </div>
           
           <div className="flex items-center space-x-1">
+          <a 
+            href={document?.markdownUrl} 
+            download 
+            className={cn(
+              "flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors",
+              document?.markdownUrl 
+                ? "text-gray-700 bg-gray-100 hover:bg-gray-200" 
+                : "text-gray-400 bg-gray-100 cursor-not-allowed opacity-50"
+            )}
+            onClick={!document?.markdownUrl ? (e) => e.preventDefault() : undefined}
+            data-testid="download-markdown-btn"
+          >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Download</span>
+            </a>
             <button
               onClick={() => handleExport('markdown')}
               disabled={!document}

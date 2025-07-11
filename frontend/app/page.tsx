@@ -6,10 +6,10 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ParsedDocument, DocumentSection } from '@/types/document';
 import { useUploadStore } from '@/hooks/useUploadStore';
 import { useDocumentHistoryQuery, useUpdateDocumentMutation } from '@/hooks/useDocumentQuery';
-import { DocumentParser } from '@/lib/documentParser';
+import { uploadDocument, processDocument, getProcessingStatus, getProcessingResult } from '@/lib/documentApi';
 import { DocumentHistoryManager } from '@/lib/documentHistory';
 import { FileUpload } from '@/components/FileUpload';
-import { DocumentViewer } from '@/components/DocumentViewer';
+import { PDFViewer } from '@/components/PDFViewer';
 import { MarkdownEditor } from '@/components/MarkdownEditor';
 import { DocumentHistory } from '@/components/DocumentHistory';
 import { ProcessingIndicator } from '@/components/ProcessingIndicator';
@@ -61,34 +61,101 @@ export default function Home() {
     setProcessingProgress({
       stage: 'uploading',
       progress: 0,
-      message: 'Preparing file for processing...'
+      message: 'Uploading file...'
     });
 
     try {
-      const parser = DocumentParser.getInstance();
-      const document = await parser.parseDocument(file, (progress, message) => {
-        setProcessingProgress(prev => ({
-          ...prev,
-          progress,
-          message,
-          stage: progress < 30 ? 'uploading' : 
-                progress < 70 ? 'parsing' : 
-                progress < 90 ? 'converting' : 'complete'
-        }));
-      });
-
-      selectDocumentWithSection(document);
-
-      // Add to history using both legacy and React Query
-      const historyManager = DocumentHistoryManager.getInstance();
-      historyManager.addDocument(document);
-      addDocumentToHistory(document);
-      
+      // Step 1: Upload file
       setProcessingProgress({
-        stage: 'complete',
-        progress: 100,
-        message: 'Document processed successfully!'
+        stage: 'uploading',
+        progress: 20,
+        message: 'Uploading document to server...'
       });
+      
+      const uploadResult = await uploadDocument(file);
+      const documentId = uploadResult.id;
+      
+      // Step 2: Start processing
+      setProcessingProgress({
+        stage: 'parsing',
+        progress: 40,
+        message: 'Processing document...'
+      });
+      
+      await processDocument(documentId);
+      
+      // Step 3: Poll for processing status
+      let processingComplete = false;
+      let attempts = 0;
+      const maxAttempts = 60; // 60 seconds timeout
+      
+      while (!processingComplete && attempts < maxAttempts) {
+        const status = await getProcessingStatus(documentId);
+        
+        if (status.status === 'completed') {
+          processingComplete = true;
+          setProcessingProgress({
+            stage: 'converting',
+            progress: 80,
+            message: 'Retrieving results...'
+          });
+          
+          // Get the final result
+          const result = await getProcessingResult(documentId);
+          
+          // Create a ParsedDocument from the backend response
+          const document: ParsedDocument = {
+            id: documentId,
+            metadata: {
+              id: documentId,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              uploadDate: new Date(),
+              lastModified: new Date(file.lastModified)
+            },
+            originalContent: result.extracted_text || '',
+            markdownContent: result.extracted_text || '',
+            markdownUrl: result.markdown_url,
+            sections: []
+          };
+          
+          selectDocumentWithSection(document);
+          
+          // Add to history
+          const historyManager = DocumentHistoryManager.getInstance();
+          historyManager.addDocument(document);
+          if (documentHistory && !Array.isArray(documentHistory)) {
+            // Initialize history if it's not an array
+            addDocumentToHistory(document);
+          } else {
+            addDocumentToHistory(document);
+          }
+          
+          setProcessingProgress({
+            stage: 'complete',
+            progress: 100,
+            message: 'Document processed successfully!'
+          });
+        } else if (status.status === 'failed') {
+          throw new Error(status.error || 'Processing failed');
+        } else {
+          // Still processing
+          setProcessingProgress(prev => ({
+            ...prev,
+            progress: Math.min(40 + attempts, 75),
+            message: 'Processing document... This may take a moment.'
+          }));
+          
+          // Wait 1 second before next check
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          attempts++;
+        }
+      }
+      
+      if (!processingComplete) {
+        throw new Error('Processing timeout');
+      }
     } catch (error) {
       console.error('Failed to process document:', error);
       setProcessingProgress({
@@ -266,13 +333,11 @@ export default function Home() {
               {/* Document Processing View */}
               {currentDocument && !isProcessing && (
                 <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full">
-                  {/* Document Viewer */}
+                  {/* PDF Viewer */}
                   <Panel defaultSize={50} minSize={30}>
                     <DocumentSuspense>
-                      <DocumentViewer
+                      <PDFViewer
                         document={currentDocument}
-                        selectedSection={selectedSection}
-                        onSectionSelect={handleSectionSelect}
                         className="h-full"
                       />
                     </DocumentSuspense>
@@ -284,6 +349,7 @@ export default function Home() {
                       "bg-border hover:bg-muted transition-colors",
                       isMobile ? "h-2 cursor-row-resize" : "w-2 cursor-col-resize"
                     )}
+                    data-testid="split-pane-divider"
                   />
 
                   {/* Markdown Editor */}

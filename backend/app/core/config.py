@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # OpenAI settings
     openai_api_key: str = Field(default="", description="OpenAI API key for document processing")
     openai_model: str = Field(default="gpt-3.5-turbo", description="OpenAI model to use")
-    openai_vision_model: str = Field(default="gpt-4-vision-preview", description="OpenAI Vision model to use")
+    openai_vision_model: str = Field(default="gpt-4o", description="OpenAI Vision model to use")
     openai_max_retries: int = Field(default=3, description="Maximum number of retry attempts")
     openai_retry_delay: float = Field(default=1.0, description="Initial retry delay in seconds")
     openai_timeout: int = Field(default=30, description="Request timeout in seconds")
@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     # Directory settings
     temp_dir: str = Field(default="./temp", description="Temporary directory for file processing")
     upload_dir: str = Field(default="./uploads", description="Directory for uploaded files")
+    markdown_dir: str = Field(default="./markdown", description="Directory for generated markdown files")
     
     # Server settings
     host: str = Field(default="0.0.0.0", description="Server host")
@@ -82,7 +83,7 @@ class Settings(BaseSettings):
             return [ext.strip() for ext in v.split(',')]
         return v
     
-    @field_validator('temp_dir', 'upload_dir', mode='before')
+    @field_validator('temp_dir', 'upload_dir', 'markdown_dir', mode='before')
     @classmethod
     def create_directories(cls, v):
         """Ensure directories exist."""
