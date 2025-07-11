@@ -29,6 +29,7 @@ class Document(Base):
     # File storage information
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     storage_type: Mapped[str] = mapped_column(String(50), default="local")
+    markdown_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     
     # Processing status
     processing_status: Mapped[str] = mapped_column(String(50), default="pending")
@@ -82,6 +83,7 @@ class Document(Base):
             "extracted_text": self.extracted_text,
             "ai_description": self.ai_description,
             "ai_summary": self.ai_summary,
+            "markdown_path": self.markdown_path,
             "document_metadata": self.document_metadata or {},
             "analysis_results": self.analysis_results or {},
             "confidence_score": self.confidence_score,

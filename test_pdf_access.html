@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Access Test</title>
+</head>
+<body>
+    <h1>Testing PDF Access</h1>
+    <p>Document ID: 6c921edc-dc59-4591-a1cc-9cd972c1a8f1</p>
+    
+    <h2>Direct Link Test:</h2>
+    <a href="http://localhost:8000/api/v1/documents/6c921edc-dc59-4591-a1cc-9cd972c1a8f1/file" target="_blank">
+        Click here to open PDF directly
+    </a>
+    
+    <h2>Iframe Test:</h2>
+    <iframe 
+        src="http://localhost:8000/api/v1/documents/6c921edc-dc59-4591-a1cc-9cd972c1a8f1/file" 
+        width="100%" 
+        height="600px"
+        style="border: 1px solid #ccc;">
+    </iframe>
+    
+    <h2>Image Test (should fail - PDFs aren't images):</h2>
+    <img src="http://localhost:8000/api/v1/documents/6c921edc-dc59-4591-a1cc-9cd972c1a8f1/file" 
+         alt="PDF as image" 
+         style="max-width: 200px;"
+         onerror="this.alt='Failed to load as image (expected)'">
+    
+    <script>
+        // Test fetch access
+        fetch('http://localhost:8000/api/v1/documents/6c921edc-dc59-4591-a1cc-9cd972c1a8f1/file')
+            .then(response => {
+                console.log('Fetch response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries())
+                });
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+            });
+    </script>
+</body>
+</html>

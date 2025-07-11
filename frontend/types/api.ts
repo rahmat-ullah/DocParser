@@ -72,6 +72,7 @@ export interface ParsedDocument {
   metadata: DocumentMetadata;
   originalContent: string;
   markdownContent: string;
+  markdownUrl?: string;
   sections: DocumentSection[];
   images: ExtractedImage[];
   tables: ExtractedTable[];
@@ -100,6 +101,7 @@ export interface DocumentHistoryEntry {
   id: string;
   metadata: DocumentMetadata;
   markdownContent: string;
+  markdownUrl?: string;
   jsonContent: ParsedDocument;
   lastAccessed: Date;
   tags?: string[];

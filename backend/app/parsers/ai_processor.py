@@ -88,8 +88,32 @@ class AIProcessor:
     async def _describe_image(self, ai_service, image: ImageBlock) -> None:
         """Generate AI description for a single image."""
         try:
-            description = await ai_service.describe_image(image.data)
-            image.alt_text = description
+            # Use the new analyze_image_structured method
+            context = {
+                "filename": image.source if hasattr(image, 'source') else "unknown",
+                "page": image.page if hasattr(image, 'page') else 0,
+                "section": image.section if hasattr(image, 'section') else "",
+                "index": image.index if hasattr(image, 'index') else 0
+            }
+            
+            # Get structured metadata
+            metadata = await ai_service.analyze_image_structured(image.data, context)
+            
+            # Store structured metadata in image object
+            if hasattr(image, 'metadata'):
+                image.metadata = metadata
+            
+            # Set alt text from the description
+            image.alt_text = metadata.get('description', '') or metadata.get('aiAnnotations', {}).get('explanationGenerated', '')
+            
+            # If no description, try to use OCR text
+            if not image.alt_text:
+                ocr_text = metadata.get('aiAnnotations', {}).get('ocrText', '')
+                if ocr_text:
+                    image.alt_text = f"Text in image: {ocr_text}"
+                else:
+                    image.alt_text = "Image (no description available)"
+                    
         except Exception as e:
             # Keep original alt text if AI fails
             if not image.alt_text:

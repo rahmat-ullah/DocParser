@@ -64,7 +64,24 @@ export const useDocumentHistoryQuery = (options?: {
 
   const query = useQuery<ParsedDocument[], Error>({
     queryKey: ['documentHistory'],
-    queryFn: fetchDocumentHistory,
+    queryFn: async () => {
+      // Try to fetch from backend first
+      const backendHistory = await fetchDocumentHistory();
+      
+      // Get local history
+      const historyManager = (await import('@/lib/documentHistory')).DocumentHistoryManager.getInstance();
+      const localHistory = historyManager.getDocuments();
+      
+      // Merge backend and local history, avoiding duplicates
+      const mergedHistory = [...backendHistory];
+      localHistory.forEach(localDoc => {
+        if (!mergedHistory.find(doc => doc.id === localDoc.id)) {
+          mergedHistory.push(localDoc);
+        }
+      });
+      
+      return mergedHistory;
+    },
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
     cacheTime: 1000 * 60 * 30, // 30 minutes
@@ -78,7 +95,7 @@ export const useDocumentHistoryQuery = (options?: {
 
   const addDocumentToHistory = useCallback((document: ParsedDocument) => {
     queryClient.setQueryData<ParsedDocument[]>(['documentHistory'], (old) => {
-      if (!old) return [document];
+      if (!old || !Array.isArray(old)) return [document];
       // Remove duplicate if exists and add to beginning
       const filtered = old.filter(doc => doc.id !== document.id);
       return [document, ...filtered];
@@ -87,7 +104,7 @@ export const useDocumentHistoryQuery = (options?: {
 
   const removeDocumentFromHistory = useCallback((documentId: string) => {
     queryClient.setQueryData<ParsedDocument[]>(['documentHistory'], (old) => {
-      if (!old) return [];
+      if (!old || !Array.isArray(old)) return [];
       return old.filter(doc => doc.id !== documentId);
     });
   }, [queryClient]);

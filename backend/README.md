@@ -6,6 +6,7 @@ A comprehensive FastAPI-based backend for document processing and AI-powered ana
 
 - **Document Upload & Management**: Secure file upload with validation and storage
 - **AI-Powered Analysis**: OpenAI Vision API integration for document description and analysis
+- **Image & Diagram Context Parsing**: Extract context from images and diagrams using GPT-4o Vision model
 - **OCR Fallback**: Tesseract OCR integration as backup when AI processing fails
 - **Async Processing**: Fully asynchronous implementation with retry logic
 - **Database Integration**: SQLAlchemy with async support for document metadata storage
@@ -82,6 +83,7 @@ backend/
    ```env
    # OpenAI Configuration
    OPENAI_API_KEY=your_openai_api_key_here
+   OPENAI_VISION_MODEL=gpt-4o  # GPT-4o model for image/diagram analysis
    
    # Application Settings
    DEBUG=true
@@ -101,6 +103,10 @@ backend/
    # Logging
    LOG_LEVEL=INFO
    LOG_FILE=logs/app.log
+   
+   # OCR Settings (Optional - for fallback)
+   OCR_FALLBACK_ENABLED=true
+   TESSERACT_PATH=  # Leave empty to use system PATH
    ```
 
 ## Usage
@@ -163,10 +169,36 @@ pytest --cov=app tests/
 The application uses environment variables for configuration. Key settings:
 
 - **OPENAI_API_KEY**: Required for AI processing
+- **OPENAI_VISION_MODEL**: Model for image/diagram analysis (default: gpt-4o)
 - **DATABASE_URL**: Database connection string
 - **MAX_UPLOAD_SIZE**: Maximum file upload size (bytes)
 - **ALLOWED_FILE_TYPES**: Comma-separated list of allowed file extensions
 - **OCR_FALLBACK_ENABLED**: Enable/disable OCR fallback (default: true)
+
+## Image and Diagram Context Parsing
+
+The backend automatically extracts context from images and diagrams within documents using OpenAI's GPT-4o Vision model:
+
+### Features:
+- **Automatic Detection**: Images and diagrams are automatically detected during document processing
+- **Context Extraction**: Detailed descriptions of visual content including:
+  - Text within images
+  - Tables and charts
+  - Diagrams and flowcharts
+  - Visual elements and their relationships
+- **Smart Fallback**: If Vision API fails, the system falls back to OCR for text extraction
+- **Integration**: Extracted context is included in the final Markdown output
+
+### Example Output:
+```markdown
+![Image](image_path.png)
+
+AI Description: This diagram shows a system architecture with three main components:
+1. Frontend (React/Next.js)
+2. Backend API (FastAPI)
+3. Database (PostgreSQL)
+The components are connected via REST API calls...
+```
 
 ## Development
 

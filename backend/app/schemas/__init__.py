@@ -21,6 +21,10 @@ from .common import (
     PaginationParams,
     PaginatedResponse
 )
+from .markdown import (
+    MarkdownPathUpdate,
+    MarkdownPathResponse
+)
 
 __all__ = [
     "DocumentCreate",
@@ -35,5 +39,7 @@ __all__ = [
     "HealthCheck",
     "APIResponse",
     "PaginationParams",
-    "PaginatedResponse"
+    "PaginatedResponse",
+    "MarkdownPathUpdate",
+    "MarkdownPathResponse"
 ]

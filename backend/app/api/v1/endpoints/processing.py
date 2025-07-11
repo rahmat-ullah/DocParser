@@ -3,7 +3,7 @@ Document processing endpoints for AI analysis.
 """
 
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -83,6 +83,7 @@ async def process_document(
 @router.get("/{document_id}/status")
 async def get_processing_status(
     document_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -101,19 +102,24 @@ async def get_processing_status(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
+    # Generate the markdown URL
+    markdown_url = str(request.url_for("download_markdown", document_id=document_id))
+    
     return {
         "document_id": document_id,
         "status": document.processing_status,
         "started_at": document.processing_started_at,
         "completed_at": document.processing_completed_at,
         "error": document.processing_error,
-        "result": document.extracted_text if document.processing_status == "completed" else None
+        "result": document.extracted_text if document.processing_status == "completed" else None,
+        "markdown_url": markdown_url
     }
 
 
 @router.get("/{document_id}/result")
 async def get_processing_result(
     document_id: str,
+    request: Request,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -138,11 +144,15 @@ async def get_processing_result(
             detail=f"Document processing not completed. Status: {document.processing_status}"
         )
     
+    # Generate the markdown URL
+    markdown_url = str(request.url_for("download_markdown", document_id=document_id))
+    
     return {
         "document_id": document_id,
         "extracted_text": document.extracted_text,
         "ai_description": document.ai_description,
-        "completed_at": document.processing_completed_at
+        "completed_at": document.processing_completed_at,
+        "markdown_url": markdown_url
     }
 
 
@@ -173,6 +183,7 @@ async def _process_document_background(
         
         # Process the document
         markdown_content = ""
+        markdown_path = ""
         async for progress in document_processor.process_document(
             file_path, 
             document_id, 
@@ -180,6 +191,7 @@ async def _process_document_background(
         ):
             if progress.stage == "completion" and hasattr(progress, 'result'):
                 markdown_content = progress.result
+                markdown_path = progress.details.get("markdown_path", "")
         
         # Update document with results
         await document_service.update_document(
@@ -187,7 +199,8 @@ async def _process_document_background(
             {
                 "processing_status": "completed",
                 "extracted_text": markdown_content,
-                "ai_description": f"Document processed successfully with AI={enable_ai_processing}"
+                "ai_description": f"Document processed successfully with AI={enable_ai_processing}",
+                "markdown_path": markdown_path
             }
         )
         

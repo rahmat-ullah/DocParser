@@ -241,6 +241,7 @@ $$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$
 ## Conclusion
 
 Document processing completed successfully.`,
+      markdownUrl: `/api/documents/${documentId}/markdown`,
       images: [
         {
           id: randomUUID(),

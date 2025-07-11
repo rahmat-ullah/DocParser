@@ -12,6 +12,7 @@ export interface ParsedDocument {
   metadata: DocumentMetadata;
   originalContent: string;
   markdownContent: string;
+  markdownUrl?: string;
   sections: DocumentSection[];
 }
 

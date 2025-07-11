@@ -33,6 +33,11 @@ class ImageBlock(BaseModel):
     bbox: Optional[Dict[str, float]] = None
     caption: Optional[str] = None
     alt_text: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None  # Structured metadata from AI analysis
+    source: Optional[str] = None  # Source document filename
+    page: Optional[int] = None  # Page number in document
+    section: Optional[str] = None  # Document section
+    index: Optional[int] = None  # Image index in document
 
 
 class TableBlock(BaseModel):

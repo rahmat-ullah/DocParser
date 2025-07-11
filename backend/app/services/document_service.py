@@ -247,3 +247,39 @@ class DocumentService:
                 }
             )
             return False
+    
+    async def update_markdown_path(
+        self,
+        document_id: str,
+        markdown_path: str
+    ) -> Optional[Document]:
+        """
+        Update the markdown_path for a document.
+        
+        Args:
+            document_id: Document ID
+            markdown_path: Path to the markdown file
+            
+        Returns:
+            Updated document or None if not found
+        """
+        return await self.update_document(
+            document_id,
+            {"markdown_path": markdown_path}
+        )
+    
+    async def get_markdown_path(
+        self,
+        document_id: str
+    ) -> Optional[str]:
+        """
+        Get the markdown_path for a document.
+        
+        Args:
+            document_id: Document ID
+            
+        Returns:
+            Markdown path or None if not found
+        """
+        document = await self.get_document(document_id)
+        return document.markdown_path if document else None

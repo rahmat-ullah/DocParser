@@ -80,6 +80,7 @@ async function processDocument(filePath: string, fileName: string, fileType: str
     metadata,
     originalContent,
     markdownContent,
+    markdownUrl: `/api/documents/${documentId}/markdown`,
     sections: [
       {
         id: randomUUID(),

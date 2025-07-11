@@ -46,6 +46,7 @@ The document contains important information about the project.
 ## Conclusion
 
 The analysis shows positive trends across all metrics.`,
+    markdownUrl: '/api/documents/sample-report/markdown',
     jsonContent: {
       id: randomUUID(),
       metadata: {
@@ -59,6 +60,7 @@ The analysis shows positive trends across all metrics.`,
       },
       originalContent: 'Original PDF content...',
       markdownContent: 'Markdown content...',
+      markdownUrl: '/api/documents/sample-report/markdown',
       sections: [],
       images: [],
       tables: [
@@ -105,6 +107,7 @@ Welcome to our project presentation.
 ![Chart showing results](chart.png)
 
 The results exceeded expectations.`,
+    markdownUrl: '/api/documents/presentation/markdown',
     jsonContent: {
       id: randomUUID(),
       metadata: {
@@ -118,6 +121,7 @@ The results exceeded expectations.`,
       },
       originalContent: 'Original PPTX content...',
       markdownContent: 'Markdown content...',
+      markdownUrl: '/api/documents/presentation/markdown',
       sections: [],
       images: [
         {
