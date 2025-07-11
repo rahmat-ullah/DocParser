@@ -1,6 +1,6 @@
 import re
 from typing import List, Optional
-from ..parsers.ast_models import TableBlock
+from backend.app.parsers.ast_models import TableBlock
 
 def parse_markdown_table_to_table_block(markdown_table: str, caption: Optional[str] = None) -> Optional[TableBlock]:
     """
