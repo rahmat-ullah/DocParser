@@ -115,7 +115,7 @@ class MarkdownGenerator:
 
     def _generate_table_block(self, table_block: TableBlock) -> str:
         """Generate Markdown for a table block."""
-        if not table_block.headers or not table_block.rows:
+        if not table_block.headers and not table_block.rows:
             return ""
         
         lines = []
@@ -124,12 +124,22 @@ class MarkdownGenerator:
         if table_block.caption:
             lines.append(f"**{table_block.caption}**\n")
         
+        # Handle case where there are no headers but there are rows
+        if not table_block.headers and table_block.rows:
+            # Use first row as headers if available
+            if table_block.rows:
+                table_block.headers = [f"Column {i+1}" for i in range(len(table_block.rows[0]))]
+        
+        # Ensure we have headers
+        if not table_block.headers:
+            return ""
+        
         # Headers
-        header_line = "| " + " | ".join(table_block.headers) + " |"
+        header_line = "| " + " | ".join(str(header).strip() for header in table_block.headers) + " |"
         lines.append(header_line)
         
-        # Separator
-        separator = "| " + " | ".join(["-" * len(header) for header in table_block.headers]) + " |"
+        # Separator (use minimum width of 3 dashes for better formatting)
+        separator = "| " + " | ".join(["-" * max(3, len(str(header).strip())) for header in table_block.headers]) + " |"
         lines.append(separator)
         
         # Rows
@@ -138,8 +148,27 @@ class MarkdownGenerator:
             padded_row = row + [""] * (len(table_block.headers) - len(row))
             padded_row = padded_row[:len(table_block.headers)]
             
-            row_line = "| " + " | ".join(str(cell) for cell in padded_row) + " |"
+            # Clean cell content and handle special characters
+            cleaned_row = []
+            for cell in padded_row:
+                cell_str = str(cell).strip()
+                # Escape pipe characters in cell content
+                cell_str = cell_str.replace("|", "\\|")
+                # Replace newlines with spaces
+                cell_str = cell_str.replace("\n", " ").replace("\r", " ")
+                cleaned_row.append(cell_str)
+            
+            row_line = "| " + " | ".join(cleaned_row) + " |"
             lines.append(row_line)
+        
+        # Add extraction method info as comment if available
+        if table_block.style and table_block.style.get("extraction_method"):
+            method = table_block.style.get("extraction_method")
+            confidence = table_block.style.get("confidence", "")
+            if confidence:
+                lines.append(f"\n<!-- Table extracted using {method} (confidence: {confidence:.2f}) -->")
+            else:
+                lines.append(f"\n<!-- Table extracted using {method} -->")
         
         return "\n".join(lines)
 

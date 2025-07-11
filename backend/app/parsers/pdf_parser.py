@@ -60,8 +60,8 @@ class PDFParser(BaseParser):
                 # Extract images
                 await self._extract_images(page, ast, page_num)
                 
-                # Extract tables (basic implementation)
-                await self._extract_tables(page, ast, page_num)
+                # Extract tables using advanced table extraction service
+                await self._extract_tables_enhanced(page, ast, page_num, file_path)
                 
                 # Extract math expressions
                 await self._extract_math(page, ast, page_num)
@@ -212,6 +212,34 @@ class PDFParser(BaseParser):
                     }
                 )
                 ast.tables.append(table_block)
+
+    async def _extract_tables_enhanced(self, page, ast: DocumentAST, page_num: int, file_path: Path) -> None:
+        """Extract tables using the enhanced table extraction service."""
+        try:
+            # Import locally to avoid circular imports
+            from app.services.table_extraction_service import get_table_extraction_service
+            
+            # Get table extraction service
+            table_service = await get_table_extraction_service()
+            
+            # Extract tables using the service for the entire PDF
+            extracted_tables = await table_service.extract_tables_from_pdf(
+                file_path, 
+                extraction_method="auto"
+            )
+            
+            # Filter tables for the current page
+            page_tables = [table for table in extracted_tables 
+                          if table.bbox and table.bbox.get("page") == page_num]
+            
+            # Add to AST
+            for table in page_tables:
+                ast.tables.append(table)
+                
+        except Exception as e:
+            # Fall back to basic table extraction
+            logger.warning(f"Enhanced table extraction failed for page {page_num}: {e}")
+            await self._extract_tables(page, ast, page_num)
 
     async def _extract_math(self, page, ast: DocumentAST, page_num: int) -> None:
         """Extract mathematical expressions from a PDF page."""

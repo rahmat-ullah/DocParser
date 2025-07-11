@@ -55,6 +55,29 @@ class IMGParser(BaseParser):
             )
             ast.images.append(image_block)
 
+            # Try to extract tables from the image
+            await self._emit_progress(progress_callback, "table_extraction", 0.7, "Extracting tables from image")
+            try:
+                # Import locally to avoid circular imports
+                from app.services.table_extraction_service import get_table_extraction_service
+                
+                table_service = await get_table_extraction_service()
+                extracted_tables = await table_service.extract_tables_from_image(
+                    file_path,
+                    extraction_method="auto"
+                )
+                
+                # Add extracted tables to AST
+                for table in extracted_tables:
+                    ast.tables.append(table)
+                    
+                if extracted_tables:
+                    await self._emit_progress(progress_callback, "table_extraction", 0.9, f"Found {len(extracted_tables)} tables in image")
+                    
+            except Exception as e:
+                # Table extraction failure shouldn't fail the entire parsing
+                await self._emit_progress(progress_callback, "table_extraction", 0.9, f"Table extraction failed: {str(e)}")
+
             await self._emit_progress(progress_callback, "completion", 1.0, "Image parsing completed")
             return ast
 
