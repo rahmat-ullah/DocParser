@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     # OCR settings
     ocr_fallback_enabled: bool = Field(default=True, description="Enable OCR fallback when Vision API fails")
     tesseract_path: Optional[str] = Field(default=None, description="Path to Tesseract executable")
+    extract_tables_from_images_enabled: bool = Field(default=True, description="Enable table extraction from images using OCR+LLM")
+    ai_processor_image_batch_size: int = Field(default=3, description="Batch size for concurrent image processing in AIProcessor")
     
     # CORS settings
     cors_origins: str = Field(
