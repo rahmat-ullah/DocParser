@@ -87,7 +87,7 @@ export default function Home() {
       // Step 3: Poll for processing status
       let processingComplete = false;
       let attempts = 0;
-      const maxAttempts = 60; // 60 seconds timeout
+      const maxAttempts = 300; // 5 minutes timeout for table extraction
       
       while (!processingComplete && attempts < maxAttempts) {
         const status = await getProcessingStatus(documentId);
@@ -141,11 +141,11 @@ export default function Home() {
           throw new Error(status.error || 'Processing failed');
         } else {
           // Still processing
-          setProcessingProgress(prev => ({
-            ...prev,
-            progress: Math.min(40 + attempts, 75),
-            message: 'Processing document... This may take a moment.'
-          }));
+          setProcessingProgress({
+            stage: 'parsing',
+            progress: Math.min(40 + (attempts * 0.5), 75),
+            message: `Processing document... This may take a moment. (${attempts}s)`
+          });
           
           // Wait 1 second before next check
           await new Promise(resolve => setTimeout(resolve, 1000));
