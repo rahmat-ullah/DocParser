@@ -185,27 +185,26 @@ class MarkdownGenerator:
         return f"{heading_prefix} {text_block.content.strip()}"
     
     def _generate_canonical_image(self, image_block: ImageBlock, figure_number: int) -> str:
-        """Generate canonical image format."""
+        """Generate canonical image format with rich multi-part description."""
         lines = []
         
         # Determine image type
         image_type = self._determine_image_type(image_block)
         
-        # Generate heading
-        if image_type == 'DIAGRAM':
-            lines.append(f"#### Figure {figure_number} — {self._get_image_title(image_block)}")
-        else:
-            lines.append(f"#### Figure {figure_number} — {self._get_image_title(image_block)}")
+        # Generate heading with short caption
+        short_caption = self._get_short_caption(image_block)
+        lines.append(f"#### Figure {figure_number} — {short_caption}")
+        lines.append("")
         
-        # Generate image embed
-        alt_text = image_block.alt_text or f"Figure {figure_number}"
-        lines.append(f"![{alt_text}](data:image/{image_block.format.lower()};base64,{image_block.data[:50]}...)")
+        # Generate image embed with proper alt text
+        alt_text = self._get_accessible_alt_text(image_block, figure_number)
+        # Wrap base64 data at 120 chars for readability
+        base64_data = self._wrap_base64_data(image_block.data)
+        lines.append(f"![Figure {figure_number}: {alt_text}](data:image/{image_block.format.lower()};base64,{base64_data})")
+        lines.append("")
         
-        # Add context blocks based on type
-        if image_type == 'DIAGRAM':
-            lines.extend(self._generate_diagram_context(image_block))
-        else:
-            lines.extend(self._generate_image_context(image_block))
+        # Add rich multi-part description
+        lines.extend(self._generate_rich_visual_description(image_block, image_type))
         
         return "\n".join(lines)
     
@@ -335,6 +334,236 @@ class MarkdownGenerator:
                 return description
         
         return "Image provides visual context and additional information."
+    
+    def _get_short_caption(self, image_block: ImageBlock) -> str:
+        """Get short caption for figure heading."""
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            title = image_block.metadata.get('title', '')
+            if title:
+                return self._truncate_text(title, 80)
+        
+        if image_block.caption:
+            return self._truncate_text(image_block.caption, 80)
+        
+        if image_block.alt_text:
+            return self._truncate_text(image_block.alt_text, 80)
+        
+        return "Visual Element"
+    
+    def _get_accessible_alt_text(self, image_block: ImageBlock, figure_number: int) -> str:
+        """Get accessible alt text (≤150 words) for screen readers."""
+        # Extract alt text from metadata or fallback
+        alt_text = ""
+        
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            # Try description first
+            description = image_block.metadata.get('description', '')
+            if description:
+                alt_text = description
+            else:
+                # Try contextual summary
+                contextual_summary = image_block.metadata.get('contextual_summary', '')
+                if contextual_summary:
+                    alt_text = contextual_summary
+        
+        # Fallback to existing alt_text or caption
+        if not alt_text:
+            alt_text = image_block.alt_text or image_block.caption or ""
+        
+        # Clean up and truncate to 150 words
+        if alt_text:
+            alt_text = self._clean_alt_text(alt_text)
+            return self._truncate_to_words(alt_text, 150)
+        return ""
+    
+    def _wrap_base64_data(self, data: str) -> str:
+        """Wrap base64 data at 120 characters for readability."""
+        if len(data) <= 120:
+            return data
+        
+        # Show first 50 characters and indicate truncation
+        return data[:50] + "..."
+    
+    def _generate_rich_visual_description(self, image_block: ImageBlock, image_type: str) -> List[str]:
+        """Generate rich multi-part visual description following the template."""
+        lines = []
+        
+        # Visual Summary (≤20 sentences)
+        visual_summary = self._get_visual_summary(image_block)
+        lines.append("**Visual Summary:**")
+        lines.append(f"• {visual_summary}")
+        lines.append("")
+        
+        # Key Details (3-30 bullets)
+        key_details = self._get_key_details(image_block)
+        if key_details:
+            lines.append("**Key Details:**")
+            for detail in key_details:
+                lines.append(f"• {detail}")
+            lines.append("")
+        
+        # Context & Significance (≤1000 words)
+        context_significance = self._get_context_significance(image_block)
+        if context_significance:
+            lines.append("**Context & Significance:**")
+            lines.append(context_significance)
+            lines.append("")
+        
+        # Type-specific sections
+        if image_type == 'DIAGRAM':
+            # Flow Steps for diagrams
+            flow_steps = self._get_flow_steps(image_block)
+            if flow_steps:
+                lines.append("**Flow Steps:**")
+                for i, step in enumerate(flow_steps, 1):
+                    lines.append(f"{i}. {step}")
+                lines.append("")
+        else:
+            # Data Insights for charts/graphs
+            data_insights = self._get_data_insights(image_block)
+            if data_insights:
+                lines.append("**Data Insights:**")
+                for insight in data_insights:
+                    lines.append(f"• {insight}")
+                lines.append("")
+        
+        return lines
+    
+    def _get_visual_summary(self, image_block: ImageBlock) -> str:
+        """Get visual summary (≤20 sentences)."""
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            # Try contextual summary first
+            contextual_summary = image_block.metadata.get('contextual_summary', '')
+            if contextual_summary:
+                return self._truncate_to_sentences(contextual_summary, 20)
+            
+            # Try description
+            description = image_block.metadata.get('description', '')
+            if description:
+                return self._truncate_to_sentences(description, 20)
+            
+            # Try aiAnnotations explanationGenerated
+            ai_annotations = image_block.metadata.get('aiAnnotations', {})
+            if isinstance(ai_annotations, dict):
+                explanation = ai_annotations.get('explanationGenerated', '')
+                if explanation:
+                    return self._truncate_to_sentences(explanation, 20)
+        
+        # Return empty if no content available
+        return ""
+    
+    def _get_key_details(self, image_block: ImageBlock) -> List[str]:
+        """Get key details (3-30 bullets, ≤100 words each)."""
+        details = []
+        
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            # Get from technical details
+            tech_details = image_block.metadata.get('technical_details', {})
+            if isinstance(tech_details, dict):
+                key_findings = tech_details.get('key_findings', [])
+                if key_findings:
+                    for finding in key_findings:  # Limit to 30
+                        detail = self._truncate_to_words(finding, 100)
+                        details.append(detail)
+                
+                # Add diagram components if available
+                components = tech_details.get('diagram_components', [])
+                if components:
+                    for component in components:  # Limit to 10
+                        detail = self._truncate_to_words(f"Component: {component}", 100)
+                        details.append(detail)
+        
+        # Return actual details without minimum requirement
+        return details[:30]  # Cap at 30
+    
+    def _get_context_significance(self, image_block: ImageBlock) -> str:
+        """Get context and significance (≤1000 words)."""
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            # Check for detailed contextual information
+            contextual_summary = image_block.metadata.get('contextual_summary', '')
+            if contextual_summary and len(contextual_summary) > 100:
+                return self._truncate_to_words(contextual_summary, 1000)
+        
+        # Generate default context explanation
+        # return "This visual element provides important context and supports the document's main content by illustrating key concepts, processes, or data relationships that enhance reader understanding."
+        return ""
+    
+    def _get_flow_steps(self, image_block: ImageBlock) -> List[str]:
+        """Get flow steps for diagrams."""
+        flow_steps = []
+        
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            tech_details = image_block.metadata.get('technical_details', {})
+            if isinstance(tech_details, dict):
+                steps = tech_details.get('flow_steps', [])
+                if steps:
+                    for step in steps:
+                        flow_steps.append(step)
+        
+        # Return only actual flow steps
+        return flow_steps
+    
+    def _get_data_insights(self, image_block: ImageBlock) -> List[str]:
+        """Get data insights for charts/graphs (2-20 bullets)."""
+        insights = []
+        
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            tech_details = image_block.metadata.get('technical_details', {})
+            if isinstance(tech_details, dict):
+                # Get data points
+                data_points = tech_details.get('data_points', [])
+                if data_points:
+                    for point in data_points:  # Limit to 20
+                        insights.append(point)
+                
+                # Get key findings as insights
+                key_findings = tech_details.get('key_findings', [])
+                if key_findings:
+                    for finding in key_findings:  # Limit to 10
+                        insights.append(finding)
+        
+        # Return only actual insights
+        return insights
+    
+    def _clean_alt_text(self, text: str) -> str:
+        """Clean alt text by removing phrases like 'image of', 'picture showing'."""
+        # Remove common redundant phrases
+        text = re.sub(r'^(image of|picture of|photo of|diagram of|chart of|graph of|figure of)\s+', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'^(showing|depicting|illustrating)\s+', '', text, flags=re.IGNORECASE)
+        text = re.sub(r'^(this is a|this is an|this shows|this depicts)\s+', '', text, flags=re.IGNORECASE)
+        
+        # Clean up whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
+    
+    def _truncate_text(self, text: str, max_chars: int) -> str:
+        """Truncate text to maximum characters."""
+        if len(text) <= max_chars:
+            return text
+        return text[:max_chars-3] + "..."
+    
+    def _truncate_to_words(self, text: str, max_words: int) -> str:
+        """Truncate text to maximum number of words."""
+        words = text.split()
+        if len(words) <= max_words:
+            return text
+        return ' '.join(words[:max_words]) + "..."
+    
+    def _truncate_to_sentences(self, text: str, max_sentences: int) -> str:
+        """Truncate text to maximum number of sentences."""
+        sentences = re.split(r'[.!?]+', text)
+        if len(sentences) <= max_sentences:
+            return text
+        return '. '.join(sentences[:max_sentences]) + "."
+    
+    def _count_sentences(self, text: str) -> int:
+        """Count sentences in text."""
+        return len(re.split(r'[.!?]+', text.strip()))
+    
+    def _count_words(self, text: str) -> int:
+        """Count words in text."""
+        return len(text.split())
     
     def _generate_canonical_table(self, table_block: TableBlock, table_number: int) -> str:
         """Generate canonical table format."""

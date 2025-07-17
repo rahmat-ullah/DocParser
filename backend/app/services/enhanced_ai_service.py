@@ -302,10 +302,98 @@ class EnhancedAIService(AIService):
         model: str
     ) -> Dict[str, Any]:
         """Analyze image using structured outputs (if supported)."""
+        enhanced_prompt = f"""
+        {system_prompt}
+
+        Analyze this image and provide structured metadata optimized for canonical markdown conversion.
+        
+        CRITICAL: Classify the image type accurately:
+        - "diagram" for: flowcharts, process diagrams, system architecture, UML diagrams, decision trees
+        - "chart" for: bar charts, pie charts, line graphs, scatter plots, histograms
+        - "table" for: data tables, spreadsheet-like content, structured data grids
+        - "image" for: photographs, illustrations, screenshots, general images
+        - "formula" for: mathematical equations, formulas, scientific notation
+        
+        DETAILED ANALYSIS REQUIREMENTS:
+        
+        1. CONTEXTUAL SUMMARY: Write 2-4 sentences explaining:
+           - How this visual relates to the broader document context
+           - Why it's significant or important to include
+           - What specific purpose it serves in the document
+           - What key message or insight it conveys
+        
+        2. KEY FINDINGS (for technical_details):
+           - Extract 5-15 specific, concrete observations
+           - Focus on measurable facts, not generic descriptions
+           - Examples: "Shows 25% increase in revenue", "Contains 4 decision points", "Displays temperature range 0-100°C"
+           - Avoid vague statements like "shows information" or "contains data"
+        
+        3. FLOW STEPS (for diagrams only):
+           - Provide 3-10 numbered steps describing the process flow
+           - Be specific about what happens at each step
+           - Include decision points, inputs, outputs, and transformations
+           - Example: "Input data is validated for format compliance", "System checks user authentication credentials"
+        
+        4. DATA POINTS (for charts/tables):
+           - Extract 5-20 specific numerical values, percentages, or measurements
+           - Include units and context where visible
+           - Examples: "Revenue: $2.5M", "Growth rate: 15%", "Temperature: 68°F"
+           - Identify trends, peaks, minimums, maximums
+        
+        5. DIAGRAM COMPONENTS (for diagrams):
+           - List 3-10 specific components, modules, or elements visible
+           - Use actual names/labels from the diagram
+           - Examples: "User Authentication Module", "Database Connection Pool", "Payment Gateway"
+        
+        6. DESCRIPTION: Write 2-5 sentences with:
+           - Clear, specific details about what is shown
+           - Actual content rather than generic statements
+           - Technical accuracy where applicable
+           - Present tense, active voice
+        
+        Provide response in JSON format with the following structure:
+        {{
+            "id": "fig_{context.get('page', 1)}_{hash(context.get('filename', 'unknown'))}",
+            "type": "diagram|chart|table|image|formula",
+            "title": "Specific descriptive title (not generic)",
+            "caption": "Detailed caption explaining the visual content",
+            "description": "Comprehensive 2-5 sentence description with specific details",
+            "contextual_summary": "2-4 sentences explaining relevance and significance in document context",
+            "linked_entities": [
+                {{"type": "concept|person|organization|metric", "value": "specific_entity_name", "confidence": 0.8}}
+            ],
+            "semantic_tags": ["specific_domain_tags", "content_type", "topic_areas"],
+            "technical_details": {{
+                "data_points": ["Specific measurements with units", "Percentage: 25%", "Value: $1.2M"],
+                "measurements": {{"width": "value", "height": "value", "scale": "value"}},
+                "key_findings": ["Specific concrete observations", "Measurable facts", "Notable patterns"],
+                "flow_steps": ["Step 1: Specific action", "Step 2: Decision point", "Step 3: Output generated"],
+                "diagram_components": ["Component A", "Module B", "System C"]
+            }},
+            "confidence_score": 0.85,
+            "source": {{
+                "filename": "{context.get('filename', '')}",
+                "page": {context.get('page', 0)},
+                "documentSection": "{context.get('section', '')}"
+            }},
+            "location": {{"x": 0, "y": 0, "width": 0, "height": 0}},
+            "textReferences": [],
+            "aiAnnotations": {{
+                "objectsDetected": ["specific_objects_detected"],
+                "ocrText": "Any text visible in the image",
+                "language": "en",
+                "explanationGenerated": "Detailed explanation with specific steps for diagrams or insights for charts"
+            }},
+            "relations": {{"explains": [], "referencedBy": []}}
+        }}
+        
+        REMEMBER: Be specific, not generic. Extract actual content, not placeholder descriptions.
+        """
+        
         response = await self.client.chat.completions.create(
             model=model,
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": enhanced_prompt},
                 {
                     "role": "user",
                     "content": [
@@ -341,48 +429,70 @@ class EnhancedAIService(AIService):
 
         Analyze this image and provide structured metadata optimized for canonical markdown conversion.
         
-        IMPORTANT: Classify the image type accurately:
+        CRITICAL: Classify the image type accurately:
         - "diagram" for: flowcharts, process diagrams, system architecture, UML diagrams, decision trees
         - "chart" for: bar charts, pie charts, line graphs, scatter plots, histograms
         - "table" for: data tables, spreadsheet-like content, structured data grids
         - "image" for: photographs, illustrations, screenshots, general images
         - "formula" for: mathematical equations, formulas, scientific notation
         
-        For DIAGRAMS, provide detailed flow analysis:
-        - Identify all major components and their relationships
-        - Describe the process flow in numbered steps
-        - Explain decision points and branching logic
+        DETAILED ANALYSIS REQUIREMENTS:
         
-        For CHARTS/GRAPHS, provide data analysis:
-        - Identify key trends and patterns
-        - Extract specific data points and values
-        - Summarize main insights and conclusions
+        1. CONTEXTUAL SUMMARY: Write 2-20 sentences explaining:
+           - How this visual relates to the broader document context
+           - Why it's significant or important to include
+           - What specific purpose it serves in the document
+           - What key message or insight it conveys
         
-        For TABLES, provide data summary:
-        - Identify column headers and data types
-        - Summarize key metrics and totals
-        - Highlight notable patterns or outliers
+        2. KEY FINDINGS (for technical_details):
+           - Extract 5-25 specific, concrete observations
+           - Focus on measurable facts, not generic descriptions
+           - Examples: "Shows 25% increase in revenue", "Contains 4 decision points", "Displays temperature range 0-100°C"
+           - Avoid vague statements like "shows information" or "contains data"
+        
+        3. FLOW STEPS (for diagrams only):
+           - Provide 3-20 numbered steps describing the process flow
+           - Be specific about what happens at each step
+           - Include decision points, inputs, outputs, and transformations
+           - Example: "Input data is validated for format compliance", "System checks user authentication credentials"
+        
+        4. DATA POINTS (for charts/tables):
+           - Extract 5-30 specific numerical values, percentages, or measurements
+           - Include units and context where visible
+           - Examples: "Revenue: $2.5M", "Growth rate: 15%", "Temperature: 68°F"
+           - Identify trends, peaks, minimums, maximums
+        
+        5. DIAGRAM COMPONENTS (for diagrams):
+           - List 3-50 specific components, modules, or elements visible
+           - Use actual names/labels from the diagram
+           - Examples: "User Authentication Module", "Database Connection Pool", "Payment Gateway"
+        
+        6. DESCRIPTION: Write 2-15 sentences with:
+           - Clear, specific details about what is shown
+           - Actual content rather than generic statements
+           - Technical accuracy where applicable
+           - Present tense, active voice
         
         Provide response in JSON format with the following structure:
         {{
-            "id": "unique_identifier",
-            "type": "image_type (diagram|chart|table|image|formula)",
-            "title": "descriptive_title",
-            "caption": "detailed_caption",
-            "description": "comprehensive_description_2_to_5_sentences",
-            "contextual_summary": "how_it_relates_to_document_and_why_it_matters",
+            "id": "fig_{context.get('page', 1)}_{hash(context.get('filename', 'unknown'))}",
+            "type": "diagram|chart|table|image|formula",
+            "title": "Specific descriptive title (not generic)",
+            "caption": "Detailed caption explaining the visual content",
+            "description": "Comprehensive 2-5 sentence description with specific details",
+            "contextual_summary": "2-30 sentences explaining relevance and significance in document context",
             "linked_entities": [
-                {{"type": "entity_type", "value": "entity_value", "confidence": 0.95}}
+                {{"type": "concept|person|organization|metric", "value": "specific_entity_name", "confidence": 0.8}}
             ],
-            "semantic_tags": ["tag1", "tag2", "tag3"],
+            "semantic_tags": ["specific_domain_tags", "content_type", "topic_areas"],
             "technical_details": {{
-                "data_points": ["specific_measurements_or_values"],
-                "measurements": {{"key": "value"}},
-                "key_findings": ["important_insights_or_components"],
-                "flow_steps": ["step1", "step2", "step3"],
-                "diagram_components": ["component1", "component2"]
+                "data_points": ["Specific measurements with units", "Percentage: 25%", "Value: $1.2M"],
+                "measurements": {{"width": "value", "height": "value", "scale": "value"}},
+                "key_findings": ["Specific concrete observations", "Measurable facts", "Notable patterns"],
+                "flow_steps": ["Step 1: Specific action", "Step 2: Decision point", "Step 3: Output generated"],
+                "diagram_components": ["Component A", "Module B", "System C"]
             }},
-            "confidence_score": 0.95,
+            "confidence_score": 0.85,
             "source": {{
                 "filename": "{context.get('filename', '')}",
                 "page": {context.get('page', 0)},
@@ -391,13 +501,15 @@ class EnhancedAIService(AIService):
             "location": {{"x": 0, "y": 0, "width": 0, "height": 0}},
             "textReferences": [],
             "aiAnnotations": {{
-                "objectsDetected": [],
-                "ocrText": "",
+                "objectsDetected": ["specific_objects_detected"],
+                "ocrText": "Any text visible in the image",
                 "language": "en",
-                "explanationGenerated": "detailed_explanation_with_numbered_steps_if_diagram"
+                "explanationGenerated": "Detailed explanation with specific steps for diagrams or insights for charts"
             }},
             "relations": {{"explains": [], "referencedBy": []}}
         }}
+        
+        REMEMBER: Be specific, not generic. Extract actual content, not placeholder descriptions.
         """
         
         response = await self.client.chat.completions.create(
