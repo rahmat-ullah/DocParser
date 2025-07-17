@@ -7,7 +7,7 @@ import pytest
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 from app.parsers.markdown_generator import MarkdownGenerator
 from app.parsers.ast_models import (
@@ -38,19 +38,22 @@ class TestMarkdownGeneratorSaving:
                     type=BlockType.HEADING,
                     level=1,
                     page=1,
-                    bbox=[0, 0, 100, 20]
+                    index=0,
+                    bbox={"x0": 0, "y0": 0, "x1": 100, "y1": 20, "page": 1, "index_on_page": 0}
                 ),
                 TextBlock(
                     content="This is a paragraph of text.",
                     type=BlockType.PARAGRAPH,
                     page=1,
-                    bbox=[0, 30, 100, 50]
+                    index=1,
+                    bbox={"x0": 0, "y0": 30, "x1": 100, "y1": 50, "page": 1, "index_on_page": 1}
                 ),
                 TextBlock(
                     content="print('Hello, world!')",
                     type=BlockType.CODE,
                     page=1,
-                    bbox=[0, 60, 100, 80]
+                    index=2,
+                    bbox={"x0": 0, "y0": 60, "x1": 100, "y1": 80, "page": 1, "index_on_page": 2}
                 )
             ],
             images=[
@@ -60,7 +63,8 @@ class TestMarkdownGeneratorSaving:
                     alt_text="Test image",
                     caption="Figure 1: Test diagram",
                     page=1,
-                    bbox=[0, 90, 100, 190]
+                    index=1000,
+                    bbox={"x0": 0, "y0": 90, "x1": 100, "y1": 190, "page": 1, "index_on_page": 1000}
                 )
             ],
             tables=[
@@ -72,7 +76,7 @@ class TestMarkdownGeneratorSaving:
                     ],
                     caption="Table 1: Sample data",
                     page=2,
-                    bbox=[0, 0, 100, 50]
+                    bbox={"x0": 0, "y0": 0, "x1": 100, "y1": 50, "page": 2, "index_on_page": 0}
                 )
             ],
             math=[
@@ -81,7 +85,7 @@ class TestMarkdownGeneratorSaving:
                     format="latex",
                     is_inline=False,
                     page=2,
-                    bbox=[0, 60, 100, 80]
+                    bbox={"x0": 0, "y0": 60, "x1": 100, "y1": 80, "page": 2, "index_on_page": 1}
                 )
             ]
         )
@@ -92,28 +96,30 @@ class TestMarkdownGeneratorSaving:
         return MarkdownGenerator()
     
     def test_markdown_generation_content(self, markdown_generator, sample_ast):
-        """Test that markdown content is generated correctly."""
+        """Test that markdown content is generated correctly in canonical format."""
         markdown_content = markdown_generator.generate(sample_ast)
         
-        # Check frontmatter
-        assert "---" in markdown_content
-        assert "title: Test Document" in markdown_content
-        assert "author: Test Author" in markdown_content
-        assert "format: pdf" in markdown_content
-        assert "pages: 5" in markdown_content
+        # Check canonical header format
+        assert "# Test Document" in markdown_content
+        assert "*Source file: Unknown*" in markdown_content
+        assert "*Authors: Test Author*" in markdown_content
+        assert "*Created: Unknown*" in markdown_content
         
         # Check content sections
-        assert "# Main Heading" in markdown_content
+        assert "## Main Heading" in markdown_content  # H2 instead of H1
         assert "This is a paragraph of text." in markdown_content
         assert "```\nprint('Hello, world!')\n```" in markdown_content
         
-        # Check image
+        # Check canonical image format
+        assert "#### Figure 1 — Figure 1: Test diagram" in markdown_content
         assert "![Test image]" in markdown_content
-        assert "*Figure 1: Test diagram*" in markdown_content
+        assert "> **Image Context:**" in markdown_content
         
-        # Check table
+        # Check canonical table format
+        assert "#### Table 1 — Table 1: Sample data" in markdown_content
         assert "| Column 1 | Column 2 | Column 3 |" in markdown_content
         assert "| Row 1 Col 1 | Row 1 Col 2 | Row 1 Col 3 |" in markdown_content
+        assert "> **Table Summary:**" in markdown_content
         
         # Check math
         assert "$$\nE = mc^2\n$$" in markdown_content
@@ -173,7 +179,7 @@ class TestMarkdownGeneratorSaving:
                 
                 # Mock the parser to return our sample AST
                 mock_parser = Mock()
-                mock_parser.parse = Mock(return_value=sample_ast)
+                mock_parser.parse = AsyncMock(return_value=sample_ast)
                 
                 with patch.object(processor.parser_factory, 'get_parser', return_value=mock_parser):
                     # Process a fake document
@@ -195,7 +201,7 @@ class TestMarkdownGeneratorSaving:
                     
                     # Check the content
                     content = expected_path.read_text(encoding="utf-8")
-                    assert "# Main Heading" in content
+                    assert "## Main Heading" in content  # H2 in canonical format
                     assert "This is a paragraph of text." in content
                     
                     # Check that the path is returned in completion details
@@ -215,7 +221,11 @@ class TestMarkdownGeneratorSaving:
         )
         
         content = markdown_generator.generate(empty_ast)
-        assert content == ""  # Should return empty string for empty document
+        # Should still generate canonical header even with empty content
+        assert "# Document" in content
+        assert "*Source file: Unknown*" in content
+        assert "*Authors: Unknown*" in content
+        assert "*Created: Unknown*" in content
     
     def test_markdown_generator_special_characters(self, markdown_generator):
         """Test markdown generation with special characters."""
@@ -226,13 +236,13 @@ class TestMarkdownGeneratorSaving:
                     content="Text with * asterisks and _ underscores",
                     type=BlockType.PARAGRAPH,
                     page=1,
-                    bbox=[0, 0, 100, 20]
+                    bbox={"x0": 0, "y0": 0, "x1": 100, "y1": 20, "page": 1}
                 ),
                 TextBlock(
                     content="Code with `backticks` and $dollars$",
                     type=BlockType.CODE,
                     page=1,
-                    bbox=[0, 30, 100, 50]
+                    bbox={"x0": 0, "y0": 30, "x1": 100, "y1": 50, "page": 1}
                 )
             ],
             images=[],

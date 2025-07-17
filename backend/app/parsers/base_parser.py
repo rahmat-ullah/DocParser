@@ -74,6 +74,32 @@ class BaseParser(ABC):
         ast = await self.parse(file_path)
         return ast.model_dump()
 
+    def _create_base_metadata(self, file_path: Path, additional_metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Create base metadata for a document.
+        
+        Args:
+            file_path: Path to the document file
+            additional_metadata: Additional metadata to merge
+            
+        Returns:
+            Dictionary containing base metadata
+        """
+        from datetime import datetime
+        
+        base_metadata = {
+            "source_file": file_path.name,
+            "format": file_path.suffix.upper().lstrip('.'),
+            "created": datetime.now().isoformat(),
+            "title": file_path.stem,  # Default title from filename
+            "authors": "Unknown",
+        }
+        
+        if additional_metadata:
+            base_metadata.update(additional_metadata)
+        
+        return base_metadata
+    
     async def _emit_progress(
         self, 
         progress_callback: Optional[AsyncGenerator[ParseProgress, None]], 

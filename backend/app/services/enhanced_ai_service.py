@@ -335,26 +335,52 @@ class EnhancedAIService(AIService):
         context_msg: str, 
         model: str
     ) -> Dict[str, Any]:
-        """Analyze image using JSON mode."""
+        """Analyze image using JSON mode with canonical markdown format support."""
         enhanced_prompt = f"""
         {system_prompt}
 
-        Provide a comprehensive analysis in JSON format with the following structure:
+        Analyze this image and provide structured metadata optimized for canonical markdown conversion.
+        
+        IMPORTANT: Classify the image type accurately:
+        - "diagram" for: flowcharts, process diagrams, system architecture, UML diagrams, decision trees
+        - "chart" for: bar charts, pie charts, line graphs, scatter plots, histograms
+        - "table" for: data tables, spreadsheet-like content, structured data grids
+        - "image" for: photographs, illustrations, screenshots, general images
+        - "formula" for: mathematical equations, formulas, scientific notation
+        
+        For DIAGRAMS, provide detailed flow analysis:
+        - Identify all major components and their relationships
+        - Describe the process flow in numbered steps
+        - Explain decision points and branching logic
+        
+        For CHARTS/GRAPHS, provide data analysis:
+        - Identify key trends and patterns
+        - Extract specific data points and values
+        - Summarize main insights and conclusions
+        
+        For TABLES, provide data summary:
+        - Identify column headers and data types
+        - Summarize key metrics and totals
+        - Highlight notable patterns or outliers
+        
+        Provide response in JSON format with the following structure:
         {{
             "id": "unique_identifier",
-            "type": "image_type",
+            "type": "image_type (diagram|chart|table|image|formula)",
             "title": "descriptive_title",
             "caption": "detailed_caption",
-            "description": "comprehensive_description",
-            "contextual_summary": "how_it_relates_to_document",
+            "description": "comprehensive_description_2_to_5_sentences",
+            "contextual_summary": "how_it_relates_to_document_and_why_it_matters",
             "linked_entities": [
                 {{"type": "entity_type", "value": "entity_value", "confidence": 0.95}}
             ],
             "semantic_tags": ["tag1", "tag2", "tag3"],
             "technical_details": {{
-                "data_points": [],
-                "measurements": {{}},
-                "key_findings": []
+                "data_points": ["specific_measurements_or_values"],
+                "measurements": {{"key": "value"}},
+                "key_findings": ["important_insights_or_components"],
+                "flow_steps": ["step1", "step2", "step3"],
+                "diagram_components": ["component1", "component2"]
             }},
             "confidence_score": 0.95,
             "source": {{
@@ -368,7 +394,7 @@ class EnhancedAIService(AIService):
                 "objectsDetected": [],
                 "ocrText": "",
                 "language": "en",
-                "explanationGenerated": ""
+                "explanationGenerated": "detailed_explanation_with_numbered_steps_if_diagram"
             }},
             "relations": {{"explains": [], "referencedBy": []}}
         }}

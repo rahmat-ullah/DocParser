@@ -33,16 +33,16 @@ class PDFParser(BaseParser):
             doc = fitz.open(str(file_path))
             total_pages = doc.page_count
             
-            ast = DocumentAST(
-                metadata={
-                    "title": doc.metadata.get("title", ""),
-                    "author": doc.metadata.get("author", ""),
-                    "subject": doc.metadata.get("subject", ""),
-                    "creator": doc.metadata.get("creator", ""),
-                    "pages": total_pages,
-                    "format": "PDF"
-                }
-            )
+            pdf_metadata = {
+                "title": doc.metadata.get("title", "") or file_path.stem,
+                "authors": doc.metadata.get("author", "") or "Unknown",
+                "subject": doc.metadata.get("subject", ""),
+                "creator": doc.metadata.get("creator", ""),
+                "pages": total_pages,
+            }
+            
+            base_metadata = self._create_base_metadata(file_path, pdf_metadata)
+            ast = DocumentAST(metadata=base_metadata)
 
             for page_num in range(total_pages):
                 await self._emit_progress(
@@ -77,6 +77,7 @@ class PDFParser(BaseParser):
     async def _extract_text_blocks(self, page, ast: DocumentAST, page_num: int) -> None:
         """Extract text blocks from a PDF page."""
         blocks = page.get_text("dict")
+        block_index = 0
         
         for block in blocks.get("blocks", []):
             if "lines" not in block:
@@ -105,15 +106,19 @@ class PDFParser(BaseParser):
                         content=line_text.strip(),
                         level=level,
                         style=font_info,
+                        page=page_num,
+                        index=block_index,
                         bbox={
                             "x0": line["bbox"][0],
                             "y0": line["bbox"][1],
                             "x1": line["bbox"][2],
                             "y1": line["bbox"][3],
-                            "page": page_num
+                            "page": page_num,
+                            "index_on_page": block_index
                         }
                     )
                     ast.textBlocks.append(text_block)
+                    block_index += 1
 
     async def _extract_images(self, page, ast: DocumentAST, page_num: int) -> None:
         """Extract images from a PDF page."""
@@ -139,12 +144,15 @@ class PDFParser(BaseParser):
                         "y0": rect.y0,
                         "x1": rect.x1,
                         "y1": rect.y1,
-                        "page": page_num
+                        "page": page_num,
+                        "index_on_page": img_index + 1000  # Offset to sort after text
                     }
                 
                 image_block = ImageBlock(
                     data=image_base64,
                     format=image_ext.upper(),
+                    page=page_num,
+                    index=img_index + 1000,  # Offset to sort after text
                     bbox=bbox
                 )
                 ast.images.append(image_block)

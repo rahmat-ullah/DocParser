@@ -27,7 +27,18 @@ class DOCXParser(BaseParser):
             await self._emit_progress(progress_callback, "initialization", 0.0, "Opening DOCX document")
 
             doc = Document(file_path)
-            ast = DocumentAST(metadata={"format": "DOCX"})
+            
+            # Get document properties
+            core_props = doc.core_properties
+            docx_metadata = {
+                "title": core_props.title or file_path.stem,
+                "authors": core_props.author or "Unknown",
+                "subject": core_props.subject or "",
+                "created": core_props.created.isoformat() if core_props.created else None,
+            }
+            
+            base_metadata = self._create_base_metadata(file_path, docx_metadata)
+            ast = DocumentAST(metadata=base_metadata)
             
             # Extract paragraphs
             for i, paragraph in enumerate(doc.paragraphs):
