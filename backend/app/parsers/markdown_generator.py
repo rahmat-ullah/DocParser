@@ -51,8 +51,11 @@ class MarkdownGenerator:
         if not metadata:
             return None
         
-        # Only include relevant metadata fields
-        relevant_fields = ['title', 'author', 'subject', 'format', 'pages', 'sheets', 'slides']
+        # Include relevant metadata fields plus enhanced AI fields
+        relevant_fields = [
+            'title', 'author', 'subject', 'format', 'pages', 'sheets', 'slides',
+            'document_type', 'complexity', 'contextual_summary', 'spatial_analysis'
+        ]
         frontmatter_data = {k: v for k, v in metadata.items() if k in relevant_fields and v}
         
         if not frontmatter_data:
@@ -60,7 +63,21 @@ class MarkdownGenerator:
         
         lines = ['---']
         for key, value in frontmatter_data.items():
-            lines.append(f'{key}: {value}')
+            if key == 'contextual_summary':
+                # Format multiline summary properly
+                lines.append(f'{key}: |')
+                for line in str(value).split('\n'):
+                    lines.append(f'  {line}')
+            elif key == 'spatial_analysis':
+                # Format spatial analysis data
+                lines.append(f'{key}:')
+                if isinstance(value, dict):
+                    for subkey, subvalue in value.items():
+                        lines.append(f'  {subkey}: {subvalue}')
+                else:
+                    lines.append(f'  {value}')
+            else:
+                lines.append(f'{key}: {value}')
         lines.append('---')
         
         return '\n'.join(lines)
@@ -99,15 +116,43 @@ class MarkdownGenerator:
             return content
 
     def _generate_image_block(self, image_block: ImageBlock) -> str:
-        """Generate Markdown for an image block."""
-        # For now, use alt text as description
-        # In a full implementation, you might save images to files and reference them
+        """Generate Markdown for an image block with enhanced metadata."""
         alt_text = image_block.alt_text or "Image"
         caption = image_block.caption or ""
         
         # Create a markdown image reference (placeholder)
         markdown = f"![{alt_text}](data:image/{image_block.format.lower()};base64,{image_block.data[:50]}...)"
         
+        # Add enhanced metadata if available
+        if hasattr(image_block, 'metadata') and image_block.metadata:
+            metadata = image_block.metadata
+            
+            # Add contextual summary if available
+            contextual_summary = metadata.get('contextual_summary', '')
+            if contextual_summary:
+                markdown += f"\n\n**Context:** {contextual_summary}"
+            
+            # Add semantic tags if available
+            semantic_tags = metadata.get('semantic_tags', [])
+            if semantic_tags:
+                markdown += f"\n\n**Tags:** {', '.join(semantic_tags)}"
+            
+            # Add technical details if available
+            technical_details = metadata.get('technical_details', {})
+            if technical_details:
+                key_findings = technical_details.get('key_findings', [])
+                if key_findings:
+                    markdown += f"\n\n**Key Findings:**\n"
+                    for finding in key_findings:
+                        markdown += f"- {finding}\n"
+                
+                data_points = technical_details.get('data_points', [])
+                if data_points:
+                    markdown += f"\n**Data Points:**\n"
+                    for point in data_points:
+                        markdown += f"- {point}\n"
+        
+        # Add original caption if present
         if caption:
             markdown += f"\n\n*{caption}*"
         

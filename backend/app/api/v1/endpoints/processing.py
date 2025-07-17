@@ -3,6 +3,7 @@ Document processing endpoints for AI analysis.
 """
 
 from typing import Optional, Dict, Any
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -171,45 +172,72 @@ async def _process_document_background(
         processing_options: Processing configuration
         db: Database session
     """
-    document_service = DocumentService(db)
-    document_processor = DocumentProcessor()
+    # Create a new database session for the background task
+    from app.db.database import get_db_session
     
+    background_db = await get_db_session()
     try:
-        document = await document_service.get_document(document_id)
-        if not document:
-            return
+        document_service = DocumentService(background_db)
+        document_processor = DocumentProcessor()
         
-        file_path = Path(document.file_path)
-        
-        # Process the document
-        markdown_content = ""
-        markdown_path = ""
-        async for progress in document_processor.process_document(
-            file_path, 
-            document_id, 
-            enable_ai_processing
-        ):
-            if progress.stage == "completion" and hasattr(progress, 'result'):
-                markdown_content = progress.result
-                markdown_path = progress.details.get("markdown_path", "")
-        
-        # Update document with results
-        await document_service.update_document(
-            document_id,
-            {
-                "processing_status": "completed",
-                "extracted_text": markdown_content,
-                "ai_description": f"Document processed successfully with AI={enable_ai_processing}",
-                "markdown_path": markdown_path
-            }
-        )
-        
-    except Exception as e:
-        # Update document with error
-        await document_service.update_document(
-            document_id,
-            {
-                "processing_status": "failed",
-                "processing_error": str(e)
-            }
-        )
+        try:
+            # Update processing status to started
+            await document_service.update_document(
+                document_id,
+                {
+                    "processing_status": "processing",
+                    "processing_started_at": datetime.utcnow()
+                }
+            )
+            
+            document = await document_service.get_document(document_id)
+            if not document:
+                return
+            
+            file_path = Path(document.file_path)
+            
+            # Process the document
+            markdown_content = ""
+            markdown_path = ""
+            print(f"Starting document processing for {document_id}")
+            
+            async for progress in document_processor.process_document(
+                file_path, 
+                document_id, 
+                enable_ai_processing
+            ):
+                print(f"Progress: {progress.stage} - {progress.progress:.1%} - {progress.message}")
+                
+                if progress.stage == "completion" and hasattr(progress, 'result'):
+                    markdown_content = progress.result
+                    markdown_path = progress.details.get("markdown_path", "")
+                    break
+            
+            # Update document with results
+            await document_service.update_document(
+                document_id,
+                {
+                    "processing_status": "completed",
+                    "processing_completed_at": datetime.utcnow(),
+                    "extracted_text": markdown_content,
+                    "ai_description": f"Document processed successfully with AI={enable_ai_processing}",
+                    "markdown_path": markdown_path
+                }
+            )
+            
+            print(f"Document processing completed for {document_id}")
+            
+        except Exception as e:
+            print(f"Error processing document {document_id}: {e}")
+            # Update document with error
+            await document_service.update_document(
+                document_id,
+                {
+                    "processing_status": "failed",
+                    "processing_completed_at": datetime.utcnow(),
+                    "processing_error": str(e)
+                }
+            )
+    finally:
+        # Close the background database session
+        await background_db.close()

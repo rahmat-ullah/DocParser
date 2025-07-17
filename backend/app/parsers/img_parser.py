@@ -15,12 +15,12 @@ from .base_parser import BaseParser, ParseError
 from .ast_models import DocumentAST, ImageBlock, TableBlock, ParseProgress
 from ..utils.markdown_utils import parse_markdown_table_to_table_block
 from ..utils.image_analysis_utils import extract_table_from_pil_image # Import new utility
-from backend.app.core.config import settings # For API key
+from ..core.config import settings # For API key
 
-# Ensure OPENAI_API_KEY is loaded for the module
+# Ensure openai_api_key is loaded for the module
 # This might be better handled if settings are passed down or globally accessible
 # For now, direct import and usage from settings.
-# openai.api_key = settings.OPENAI_API_KEY
+# openai.api_key = settings.openai_api_key
 
 
 class IMGParser(BaseParser):
@@ -31,9 +31,9 @@ class IMGParser(BaseParser):
         # OpenAI API key is typically initialized globally when the openai library is imported
         # and settings are loaded. Explicitly setting openai.api_key here might be
         # redundant or could interfere if the client is already configured.
-        # The utility function extract_table_from_pil_image now also checks settings.OPENAI_API_KEY.
-        if not settings.OPENAI_API_KEY:
-            print("Warning: OPENAI_API_KEY is not set in settings. Table extraction from images will likely fail.")
+        # The utility function extract_table_from_pil_image now also checks settings.openai_api_key.
+        if not settings.openai_api_key:
+            print("Warning: openai_api_key is not set in settings. Table extraction from images will likely fail.")
 
 
     def supports_file(self, file_path: Path) -> bool:
@@ -87,7 +87,7 @@ class IMGParser(BaseParser):
             await self._emit_progress(self.progress_callback, "table_extraction_start", 0.5, "Attempting table extraction from image")
 
             # Use the centralized utility function
-            if settings.EXTRACT_TABLES_FROM_IMAGES_ENABLED: # Check if feature is enabled
+            if settings.extract_tables_from_images_enabled: # Check if feature is enabled
                 extracted_table_block = await extract_table_from_pil_image(image_pil, file_path.name)
                 if extracted_table_block:
                     ast.tables.append(extracted_table_block)

@@ -3,9 +3,9 @@ from PIL import Image
 import openai
 from typing import Optional
 
-from backend.app.parsers.ast_models import TableBlock
-from backend.app.utils.markdown_utils import parse_markdown_table_to_table_block
-from backend.app.core.config import settings # For API key and model
+from ..parsers.ast_models import TableBlock
+from .markdown_utils import parse_markdown_table_to_table_block
+from ..core.config import settings # For API key and model
 
 async def extract_table_from_pil_image(
     image_pil: Image.Image,
@@ -26,19 +26,22 @@ async def extract_table_from_pil_image(
 
     # Ensure OpenAI API key is set (it should be set globally by application startup,
     # but this is a safeguard or place for more specific error handling if needed)
-    if not settings.OPENAI_API_KEY:
-        print(f"Warning: OPENAI_API_KEY not set. Skipping table extraction for {image_name}.")
+    if not settings.openai_api_key:
+        print(f"Warning: openai_api_key not set. Skipping table extraction for {image_name}.")
         # In a real app, might raise an error or log more formally
         return None
 
     # Set API key for the current context if not already set by openai client's initialization
     # This might be redundant if openai client is configured once globally.
-    if not openai.api_key and settings.OPENAI_API_KEY:
-        openai.api_key = settings.OPENAI_API_KEY
+    if not openai.api_key and settings.openai_api_key:
+        openai.api_key = settings.openai_api_key
 
 
     try:
-        raw_text = pytesseract.image_to_string(image_pil)
+        # Add timeout for OCR processing to prevent hanging
+        import asyncio
+        loop = asyncio.get_event_loop()
+        raw_text = await loop.run_in_executor(None, pytesseract.image_to_string, image_pil)
 
         if not raw_text.strip():
             return None # No text detected
@@ -60,12 +63,12 @@ Markdown table:
              return None
 
         response = await openai.chat.completions.create(
-            model=settings.OPENAI_MODEL or "gpt-3.5-turbo",
+            model=settings.openai_model or "gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that extracts tables from text and formats them in Markdown."},
                 {"role": "user", "content": prompt}
             ],
-            timeout=settings.OPENAI_TIMEOUT # Use configured timeout
+            timeout=settings.openai_timeout # Use configured timeout
         )
 
         markdown_table_str = response.choices[0].message.content.strip()

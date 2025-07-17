@@ -68,6 +68,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+async def get_db_session() -> AsyncSession:
+    """
+    Get a database session for background tasks.
+    
+    Returns:
+        AsyncSession: Database session
+    """
+    return AsyncSessionLocal()
+
+
 async def check_db_connection() -> bool:
     """
     Check if database connection is working.

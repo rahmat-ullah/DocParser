@@ -21,16 +21,32 @@ class Settings(BaseSettings):
     
     # OpenAI settings
     openai_api_key: str = Field(default="", description="OpenAI API key for document processing")
-    openai_model: str = Field(default="gpt-3.5-turbo", description="OpenAI model to use")
-    openai_vision_model: str = Field(default="gpt-4o", description="OpenAI Vision model to use")
+    openai_model: str = Field(default="gpt-4o", description="OpenAI model to use for text processing")
+    openai_vision_model: str = Field(default="gpt-4o", description="OpenAI Vision model to use for image analysis")
+    openai_reasoning_model: str = Field(default="o1-preview", description="OpenAI reasoning model for complex analysis")
     openai_max_retries: int = Field(default=3, description="Maximum number of retry attempts")
     openai_retry_delay: float = Field(default=1.0, description="Initial retry delay in seconds")
-    openai_timeout: int = Field(default=30, description="Request timeout in seconds")
+    openai_timeout: int = Field(default=60, description="Request timeout in seconds")
+    openai_max_tokens: int = Field(default=4000, description="Maximum tokens for OpenAI responses")
+    openai_temperature: float = Field(default=0.1, description="Temperature for OpenAI responses (0.0-2.0)")
+    
+    # Advanced AI features
+    use_structured_outputs: bool = Field(default=True, description="Use structured outputs for better parsing")
+    enable_multi_modal_analysis: bool = Field(default=True, description="Enable multi-modal analysis for complex documents")
+    use_reasoning_model_for_complex_docs: bool = Field(default=False, description="Use reasoning model for complex document analysis")
+    enable_contextual_understanding: bool = Field(default=True, description="Enable contextual understanding across document sections")
+    
+    # Document type specific models
+    scientific_paper_model: str = Field(default="gpt-4o", description="Model for scientific papers")
+    financial_report_model: str = Field(default="gpt-4o", description="Model for financial reports")
+    technical_manual_model: str = Field(default="gpt-4o", description="Model for technical manuals")
+    legal_document_model: str = Field(default="gpt-4o", description="Model for legal documents")
     
     # OCR settings
     ocr_fallback_enabled: bool = Field(default=True, description="Enable OCR fallback when Vision API fails")
     tesseract_path: Optional[str] = Field(default=None, description="Path to Tesseract executable")
     extract_tables_from_images_enabled: bool = Field(default=True, description="Enable table extraction from images using OCR+LLM")
+    # extract_tables_from_images_enabled: bool = Field(default=True, description="Enable table extraction from images using OCR+LLM (can be slow)")
     ai_processor_image_batch_size: int = Field(default=3, description="Batch size for concurrent image processing in AIProcessor")
     
     # CORS settings
@@ -150,11 +166,24 @@ def get_openai_config() -> dict:
         "api_key": settings.openai_api_key,
         "model": settings.openai_model,
         "vision_model": settings.openai_vision_model,
+        "reasoning_model": settings.openai_reasoning_model,
         "max_retries": settings.openai_max_retries,
         "retry_delay": settings.openai_retry_delay,
         "timeout": settings.openai_timeout,
+        "max_tokens": settings.openai_max_tokens,
+        "temperature": settings.openai_temperature,
+        "use_structured_outputs": settings.use_structured_outputs,
+        "enable_multi_modal_analysis": settings.enable_multi_modal_analysis,
+        "use_reasoning_model_for_complex_docs": settings.use_reasoning_model_for_complex_docs,
+        "enable_contextual_understanding": settings.enable_contextual_understanding,
         "ocr_fallback_enabled": settings.ocr_fallback_enabled,
         "tesseract_path": settings.tesseract_path,
+        "document_type_models": {
+            "scientific_paper": settings.scientific_paper_model,
+            "financial_report": settings.financial_report_model,
+            "technical_manual": settings.technical_manual_model,
+            "legal_document": settings.legal_document_model,
+        },
     }
 
 
