@@ -181,5 +181,4 @@ export function DocumentViewer({
     </Panel>
   );
 }
-export { DocumentViewer };
 export default DocumentViewer;
