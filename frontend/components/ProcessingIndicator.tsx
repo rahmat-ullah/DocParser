@@ -89,35 +89,41 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
   };
 
   return (
-    <div className={cn('bg-background rounded-lg border border-border p-6 shadow-sm', className)}>
-      <div className="flex items-center space-x-4 mb-4">
-        {getStageIcon()}
+    <div className={cn('bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 shadow-lg backdrop-blur-sm', className)}>
+      <div className="flex items-center space-x-4 mb-6">
+        <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-sm">
+          {getStageIcon()}
+        </div>
         <div className="flex-1">
-          <h3 className="font-medium text-foreground">{getStageText()}</h3>
-          <p className="text-sm text-muted-foreground">{activeProgress.message}</p>
+          <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{getStageText()}</h3>
+          <p className="text-slate-600 dark:text-slate-400 mt-1">{activeProgress.message}</p>
         </div>
       </div>
       
       {/* Progress Bar */}
-      <div className="relative">
-        <div className="w-full bg-muted rounded-full h-2">
+      <div className="relative mb-6">
+        <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
           <div
             className={cn(
-              'h-2 rounded-full transition-all duration-300 ease-out',
+              'h-full rounded-full transition-all duration-500 ease-out relative',
               getStageColor()
             )}
             style={{ width: `${displayedProgress}%` }}
-          />
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-full"></div>
+          </div>
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+        <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mt-2">
           <span>0%</span>
-          <span className="font-medium">{Math.round(displayedProgress)}%</span>
+          <span className="font-semibold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {Math.round(displayedProgress)}%
+          </span>
           <span>100%</span>
         </div>
       </div>
 
       {/* Stage Indicators */}
-      <div className="flex justify-between mt-4">
+      <div className="flex justify-between">
         {[
           { key: 'uploading', label: 'Upload' },
           { key: 'parsing', label: 'Parse' },
@@ -127,20 +133,24 @@ export function ProcessingIndicator({ progress, className }: ProcessingIndicator
           <div
             key={stage.key}
             className={cn(
-              'flex flex-col items-center space-y-1',
-              activeProgress.stage === stage.key ? 'text-primary' : 'text-muted-foreground'
+              'flex flex-col items-center space-y-2',
+              activeProgress.stage === stage.key ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'
             )}
           >
             <div
               className={cn(
-                'w-3 h-3 rounded-full border-2 transition-colors',
+                'w-4 h-4 rounded-full border-2 transition-all duration-300',
                 activeProgress.stage === stage.key 
-                  ? 'border-primary bg-primary' 
+                  ? 'border-blue-500 bg-blue-500 shadow-lg shadow-blue-500/30' 
                   : index < ['uploading', 'parsing', 'converting', 'complete'].indexOf(activeProgress.stage)
-                  ? 'border-green-500 bg-green-500'
-                  : 'border-border bg-background'
+                  ? 'border-green-500 bg-green-500 shadow-sm shadow-green-500/20'
+                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
               )}
-            />
+            >
+              {(activeProgress.stage === stage.key || index < ['uploading', 'parsing', 'converting', 'complete'].indexOf(activeProgress.stage)) && (
+                <div className="w-full h-full rounded-full bg-white/30 animate-pulse"></div>
+              )}
+            </div>
             <span className="text-xs font-medium">{stage.label}</span>
           </div>
         ))}

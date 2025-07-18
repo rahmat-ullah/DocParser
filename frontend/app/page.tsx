@@ -218,17 +218,23 @@ export default function Home() {
   }, [toggleHistory, toggleSettings]);
 
   return (
-    <div className="min-h-screen bg-secondary flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
       {/* Header */}
-      <header className="bg-secondary border-b border-border px-4 md:px-6 py-4 flex-shrink-0">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 md:px-6 py-4 flex-shrink-0 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <FileText className="w-6 h-6 md:w-8 md:h-8 text-primary" />
-              <h1 className="text-xl md:text-2xl font-bold text-foreground">DocParser</h1>
-            </div>
-            <div className="hidden md:block text-sm text-muted-foreground ml-4">
-              Convert documents to markdown with ease
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  DocParser
+                </h1>
+                <div className="hidden md:block text-sm text-slate-600 dark:text-slate-400">
+                  Transform documents into markdown
+                </div>
+              </div>
             </div>
           </div>
           
@@ -244,17 +250,20 @@ export default function Home() {
               onClick={() => toggleHistory()}
               variant={showHistory ? 'default' : 'ghost'}
               aria-label="Toggle history sidebar"
+              className="hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             />
             <IconButton
               icon={<Settings className="w-5 h-5" />}
               onClick={() => toggleSettings()}
               variant="ghost"
               aria-label="Settings"
+              className="hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             />
             <IconButton
               icon={<HelpCircle className="w-5 h-5" />}
               variant="ghost"
               aria-label="Help"
+              className="hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             />
           </div>
         </div>
@@ -306,12 +315,31 @@ export default function Home() {
                 <div className="flex-1 flex items-center justify-center p-4 md:p-8">
                   <div className="max-w-2xl w-full">
                     <div className="text-center mb-8">
-                      <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+                      <div className="mb-6">
+                        <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                          <FileText className="w-10 h-10 text-white" />
+                        </div>
+                      </div>
+                      <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-600 dark:from-slate-100 dark:via-slate-300 dark:to-slate-500 bg-clip-text text-transparent mb-4">
                         Transform Documents into Markdown
                       </h2>
-                      <p className="text-base md:text-lg text-muted-foreground mb-8">
-                        Upload your documents and convert them to clean, structured markdown format
+                      <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                        Upload your documents and convert them to clean, structured markdown format with AI-powered processing
                       </p>
+                      <div className="flex flex-wrap justify-center gap-4 mb-8">
+                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-slate-700 dark:text-slate-300">AI-Powered</span>
+                        </div>
+                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-slate-700 dark:text-slate-300">Multiple Formats</span>
+                        </div>
+                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-slate-700 dark:text-slate-300">Real-time Preview</span>
+                        </div>
+                      </div>
                     </div>
                     <FileUpload
                       onFileSelect={handleFileSelect}
@@ -372,17 +400,25 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-background border-t border-border px-4 md:px-6 py-3 flex-shrink-0">
-        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-muted-foreground space-y-2 md:space-y-0">
+      <footer className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 px-4 md:px-6 py-4 flex-shrink-0">
+        <div className="flex flex-col md:flex-row items-center justify-between text-sm text-slate-600 dark:text-slate-400 space-y-2 md:space-y-0">
           <div className="flex items-center space-x-4">
-            <span>DocParser v1.0</span>
-            <span className="hidden md:inline">•</span>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+              <span className="font-medium">DocParser v1.0</span>
+            </div>
+            <span className="hidden md:inline text-slate-400">•</span>
             <span>
-              {currentDocument ? `${currentDocument.sections.length} sections` : 'No document loaded'}
+              {currentDocument ? `${currentDocument.sections.length} sections processed` : 'Ready to process documents'}
             </span>
           </div>
           <div className="hidden md:flex items-center space-x-4">
-            <span>Shortcuts: Ctrl+H (History), Ctrl+S (Save), Ctrl+, (Settings)</span>
+            <div className="flex items-center space-x-2 text-xs bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
+              <span>Shortcuts:</span>
+              <span className="font-mono">Ctrl+H</span>
+              <span className="font-mono">Ctrl+S</span>
+              <span className="font-mono">Ctrl+,</span>
+            </div>
           </div>
         </div>
       </footer>
