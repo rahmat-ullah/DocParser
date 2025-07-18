@@ -91,8 +91,8 @@ class MarkdownGenerator:
                 if math_content.strip():
                     markdown_parts.append(math_content)
         
-        # Join all parts with proper spacing
-        return '\n\n'.join(filter(None, markdown_parts))
+        # Join all parts with proper spacing and ensure clean formatting
+        return self._clean_markdown_output('\n\n'.join(filter(None, markdown_parts)))
     
     def _collect_and_sort_chunks(self, ast: DocumentAST) -> List[ChunkElement]:
         """Collect all chunks and sort them by page and index_on_page."""
@@ -503,6 +503,20 @@ class MarkdownGenerator:
         # Return only actual flow steps
         return flow_steps
     
+    def _calculate_max_column_widths(self, table_block: TableBlock) -> List[int]:
+        """Calculate maximum widths for table columns based on content."""
+        max_widths = [0] * len(table_block.headers)
+        
+        # Compare widths for headers and all rows
+        for i, header in enumerate(table_block.headers):
+            max_widths[i] = max(max_widths[i], len(header))
+        
+        for row in table_block.rows:
+            for i, cell in enumerate(row):
+                max_widths[i] = max(max_widths[i], len(cell))
+        
+        return max_widths
+    
     def _get_data_insights(self, image_block: ImageBlock) -> List[str]:
         """Get data insights for charts/graphs (2-20 bullets)."""
         insights = []
@@ -576,7 +590,9 @@ class MarkdownGenerator:
         # Generate GitHub-flavored Markdown table
         if table_block.headers and table_block.rows:
             # Headers
-            header_line = "| " + " | ".join(self._wrap_cell_content(header) for header in table_block.headers) + " |"
+            # Adjust column widths dynamically if possible to better match PDF appearance
+            max_column_widths = self._calculate_max_column_widths(table_block)
+            header_line = "| " + " | ".join(self._wrap_cell_content(header, max_column_widths[i]) for i, header in enumerate(table_block.headers)) + " |"
             lines.append(header_line)
             
             # Separator
@@ -589,7 +605,7 @@ class MarkdownGenerator:
                 padded_row = row + [""] * (len(table_block.headers) - len(row))
                 padded_row = padded_row[:len(table_block.headers)]
                 
-                row_line = "| " + " | ".join(self._wrap_cell_content(str(cell)) for cell in padded_row) + " |"
+                row_line = "| " + " | ".join(self._wrap_cell_content(str(cell), max_column_widths[i]) for i, cell in enumerate(padded_row)) + " |"
                 lines.append(row_line)
         
         # Table Summary
@@ -599,19 +615,20 @@ class MarkdownGenerator:
         
         return "\n".join(lines)
     
-    def _wrap_cell_content(self, content: str) -> str:
+    def _wrap_cell_content(self, content: str, max_width: int = 80) -> str:
         """Wrap cell content at word boundaries if >80 chars."""
-        if len(content) <= 80:
+        if len(content) <= max_width:
             return content
         
         # Simple word wrapping for table cells
         words = content.split()
         lines = []
+        # Allow passing specific column width for wrapping
         current_line = []
         current_length = 0
         
         for word in words:
-            if current_length + len(word) + 1 <= 80:
+            if current_length + len(word) + 1 <= max_width:
                 current_line.append(word)
                 current_length += len(word) + 1
             else:
@@ -708,7 +725,8 @@ class MarkdownGenerator:
                 return content
         
         else:  # PARAGRAPH
-            return content
+            # Preserve paragraph structure and line breaks
+            return self._format_paragraph(content)
 
     def _generate_image_block(self, image_block: ImageBlock) -> str:
         """Generate Markdown for an image block with enhanced metadata."""
@@ -799,3 +817,42 @@ class MarkdownGenerator:
                 return f"$$\n{content}\n$$"
             else:
                 return f"```math\n{content}\n```"
+    
+    def _clean_markdown_output(self, content: str) -> str:
+        """Clean and format final markdown output."""
+        # Remove excessive blank lines
+        content = re.sub(r'\n{3,}', '\n\n', content)
+        
+        # Ensure proper spacing around headings
+        content = re.sub(r'\n(#{1,6}\s)', '\n\n\1', content)
+        content = re.sub(r'(#{1,6}\s[^\n]+)\n([^\n#])', r'\1\n\n\2', content)
+        
+        # Clean up list formatting
+        content = re.sub(r'\n\n([\-\*\+]\s)', '\n\1', content)
+        content = re.sub(r'\n\n(\d+\.\s)', '\n\1', content)
+        
+        # Ensure proper spacing around tables
+        content = re.sub(r'\n\n(\|[^\n]+\|)\n\n', '\n\n\1\n', content)
+        
+        return content.strip()
+    
+    def _format_paragraph(self, content: str) -> str:
+        """Format paragraph content to preserve structure."""
+        # Handle line breaks within paragraphs
+        lines = content.split('\n')
+        formatted_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            if line:
+                # Check if this is a sentence continuation
+                if (formatted_lines and 
+                    not line[0].isupper() and 
+                    not formatted_lines[-1].endswith(('.', '!', '?', ':')) and
+                    len(formatted_lines[-1]) > 40):
+                    # Join with previous line
+                    formatted_lines[-1] += ' ' + line
+                else:
+                    formatted_lines.append(line)
+        
+        return '\n\n'.join(formatted_lines) if len(formatted_lines) > 1 else content
