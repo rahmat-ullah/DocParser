@@ -61,7 +61,7 @@ export function MarkdownEditor({
 
   const handleExport = (format: 'markdown' | 'json') => {
     if (!document) return;
-    
+
     if (format === 'markdown') {
       ExportManager.exportAsMarkdown(document);
     } else {
@@ -201,7 +201,7 @@ export function MarkdownEditor({
             </span>
           )}
         </div>
-        
+
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -220,7 +220,7 @@ export function MarkdownEditor({
               </>
             )}
           </button>
-          
+
           <div className="flex items-center space-x-1 border border-gray-300 rounded-lg">
             <button
               onClick={() => setIsPreviewMode(false)}
@@ -247,7 +247,7 @@ export function MarkdownEditor({
               <span className="hidden sm:inline">Preview</span>
             </button>
           </div>
-          
+
           <div className="flex items-center space-x-1">
           <a 
             href={document?.markdownUrl} 
@@ -303,3 +303,5 @@ export function MarkdownEditor({
     </div>
   );
 }
+export { MarkdownEditor };
+export default MarkdownEditor;

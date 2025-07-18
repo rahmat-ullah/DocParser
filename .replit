@@ -26,4 +26,4 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && npm run dev -- --port 5000"
+args = "cd frontend && npm run dev -- --port 3000"

@@ -21,9 +21,9 @@ app.prepare().then(() => {
   // Make socketServer available globally for API routes
   global.socketServer = socketServer;
 
-  server.listen(5000, err => {
+  server.listen(3000, err => {
     if (err) throw err;
-    console.log('> Ready on http://0.0.0.0:5000');
+    console.log('> Ready on http://0.0.0.0:3000');
   });
 });
 
