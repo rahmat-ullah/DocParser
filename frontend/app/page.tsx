@@ -218,7 +218,7 @@ export default function Home() {
   }, [toggleHistory, toggleSettings]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 px-4 md:px-6 py-4 flex-shrink-0 shadow-sm">
         <div className="flex items-center justify-between">
@@ -271,7 +271,7 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        <PanelGroup direction="horizontal" className="flex-1">
+        <PanelGroup direction="horizontal" className="flex-1 overflow-hidden">
           {/* History Sidebar */}
           {showHistory && (
             <>
@@ -307,95 +307,105 @@ export default function Home() {
             </>
           )}
 
-          {/* Main Content Area */}
-          {!showHistory || !isMobile ? (
+          {/* Upload/Processing Area - Only when no document */}
+          {(!currentDocument && !isProcessing) && (
             <Panel defaultSize={showHistory ? 75 : 100} minSize={30}>
-              {/* Upload Area */}
-              {!currentDocument && !isProcessing && (
-                <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-                  <div className="max-w-2xl w-full">
-                    <div className="text-center mb-8">
-                      <div className="mb-6">
-                        <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
-                          <FileText className="w-10 h-10 text-white" />
-                        </div>
-                      </div>
-                      <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-600 dark:from-slate-100 dark:via-slate-300 dark:to-slate-500 bg-clip-text text-transparent mb-4">
-                        Transform Documents into Markdown
-                      </h2>
-                      <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                        Upload your documents and convert them to clean, structured markdown format with AI-powered processing
-                      </p>
-                      <div className="flex flex-wrap justify-center gap-4 mb-8">
-                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-slate-700 dark:text-slate-300">AI-Powered</span>
-                        </div>
-                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-slate-700 dark:text-slate-300">Multiple Formats</span>
-                        </div>
-                        <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-slate-700 dark:text-slate-300">Real-time Preview</span>
-                        </div>
+              <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+                <div className="max-w-2xl w-full">
+                  <div className="text-center mb-8">
+                    <div className="mb-6">
+                      <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-4 shadow-lg">
+                        <FileText className="w-10 h-10 text-white" />
                       </div>
                     </div>
-                    <FileUpload
-                      onFileSelect={handleFileSelect}
-                      isProcessing={isProcessing}
-                    />
+                    <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-slate-900 via-slate-700 to-slate-600 dark:from-slate-100 dark:via-slate-300 dark:to-slate-500 bg-clip-text text-transparent mb-4">
+                      Transform Documents into Markdown
+                    </h2>
+                    <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                      Upload your documents and convert them to clean, structured markdown format with AI-powered processing
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-4 mb-8">
+                      <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">AI-Powered</span>
+                      </div>
+                      <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Multiple Formats</span>
+                      </div>
+                      <div className="flex items-center space-x-2 bg-white dark:bg-slate-800 px-4 py-2 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm text-slate-700 dark:text-slate-300">Real-time Preview</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* Processing Indicator */}
-              {isProcessing && (
-                <div className="flex-1 flex items-center justify-center p-4 md:p-8">
-                  <div className="max-w-md w-full">
-                    <ProcessingIndicator progress={processingProgress} />
-                  </div>
-                </div>
-              )}
-
-              {/* Document Processing View */}
-              {currentDocument && !isProcessing && (
-                <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full">
-                  {/* PDF Viewer */}
-                  <Panel defaultSize={50} minSize={30}>
-                    <DocumentSuspense>
-                      <PDFViewer
-                        document={currentDocument}
-                        className="h-full"
-                      />
-                    </DocumentSuspense>
-                  </Panel>
-
-                  {/* Resizable Handle */}
-                  <PanelResizeHandle 
-                    className={cn(
-                      "bg-border hover:bg-muted transition-colors",
-                      isMobile ? "h-2 cursor-row-resize" : "w-2 cursor-col-resize"
-                    )}
-                    data-testid="split-pane-divider"
+                  <FileUpload
+                    onFileSelect={handleFileSelect}
+                    isProcessing={isProcessing}
                   />
-
-                  {/* Markdown Editor */}
-                  <Panel defaultSize={50} minSize={30}>
-                    <DocumentSuspense>
-                      <MarkdownEditor
-                        document={currentDocument}
-                        selectedSection={selectedSection}
-                        onMarkdownChange={handleMarkdownChange}
-                        onSectionSelect={handleSectionSelect}
-                        className="h-full"
-                      />
-                    </DocumentSuspense>
-                  </Panel>
-                </PanelGroup>
-              )}
+                </div>
+              </div>
             </Panel>
-          ) : null}
+          )}
+
+          {/* Processing Indicator */}
+          {isProcessing && (
+            <Panel defaultSize={showHistory ? 75 : 100} minSize={30}>
+              <div className="flex-1 flex items-center justify-center p-4 md:p-8">
+                <div className="max-w-md w-full">
+                  <ProcessingIndicator progress={processingProgress} />
+                </div>
+              </div>
+            </Panel>
+          )}
+
+          {/* PDF Viewer - Middle Panel */}
+          {currentDocument && !isProcessing && !isMobile && (
+            <>
+              <Panel defaultSize={showHistory ? 37 : 50} minSize={25}>
+                <DocumentSuspense>
+                  <PDFViewer
+                    document={currentDocument}
+                    className="h-full"
+                  />
+                </DocumentSuspense>
+              </Panel>
+
+              {/* Resizable Handle */}
+              <PanelResizeHandle 
+                className="bg-border hover:bg-muted transition-colors w-2 cursor-col-resize"
+                data-testid="split-pane-divider-pdf-markdown"
+              />
+
+              {/* Markdown Editor - Right Panel */}
+              <Panel defaultSize={showHistory ? 38 : 50} minSize={25}>
+                <DocumentSuspense>
+                  <MarkdownEditor
+                    document={currentDocument}
+                    selectedSection={selectedSection}
+                    onMarkdownChange={handleMarkdownChange}
+                    onSectionSelect={handleSectionSelect}
+                    className="h-full"
+                  />
+                </DocumentSuspense>
+              </Panel>
+            </>
+          )}
+
+          {/* Mobile: Show only one panel at a time */}
+          {currentDocument && !isProcessing && isMobile && (
+            <Panel defaultSize={100} minSize={100}>
+              <DocumentSuspense>
+                <MarkdownEditor
+                  document={currentDocument}
+                  selectedSection={selectedSection}
+                  onMarkdownChange={handleMarkdownChange}
+                  onSectionSelect={handleSectionSelect}
+                  className="h-full"
+                />
+              </DocumentSuspense>
+            </Panel>
+          )}
         </PanelGroup>
       </div>
 
