@@ -1,131 +1,182 @@
+
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Upload, File, X, FileText, Image } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { IconButton } from '@/components/ui/icon-button';
+import React, { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Button } from '@/components/ui/button';
+import { useUploadStore } from '@/hooks/useUploadStore';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Upload, 
+  File, 
+  FileText, 
+  Image, 
+  FileSpreadsheet, 
+  Presentation,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
 
-interface FileUploadProps {
-  onFileSelect: (file: File) => void;
-  isProcessing: boolean;
-  className?: string;
-}
-
-export function FileUpload({ onFileSelect, isProcessing, className }: FileUploadProps) {
+const FileUpload: React.FC = () => {
+  const { uploadFile, isProcessing } = useUploadStore();
+  const { toast } = useToast();
   const [dragActive, setDragActive] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      setSelectedFile(file);
-      onFileSelect(file);
-    }
-  }, [onFileSelect]);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      onFileSelect(file);
-    }
-  }, [onFileSelect]);
-
-  const clearFile = useCallback(() => {
-    setSelectedFile(null);
-  }, []);
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) {
-      return <Image className="w-6 h-6 text-purple-500" />;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return <FileText className="h-8 w-8 text-red-500" />;
+      case 'docx':
+        return <FileText className="h-8 w-8 text-blue-500" />;
+      case 'xlsx':
+        return <FileSpreadsheet className="h-8 w-8 text-green-500" />;
+      case 'pptx':
+        return <Presentation className="h-8 w-8 text-orange-500" />;
+      case 'txt':
+        return <FileText className="h-8 w-8 text-muted-foreground" />;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return <Image className="h-8 w-8 text-purple-500" />;
+      default:
+        return <File className="h-8 w-8 text-muted-foreground" />;
     }
-    return <FileText className="w-6 h-6 text-primary" />;
   };
 
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      setDragActive(false);
+      
+      if (acceptedFiles.length === 0) {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload a supported file format (PDF, DOCX, XLSX, PPTX, TXT, or image)",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const file = acceptedFiles[0];
+      
+      // File size check (50MB limit)
+      if (file.size > 50 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please upload a file smaller than 50MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        await uploadFile(file);
+        toast({
+          title: "Upload successful",
+          description: `${file.name} has been uploaded and is being processed`,
+        });
+      } catch (error) {
+        toast({
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : "An unknown error occurred",
+          variant: "destructive",
+        });
+      }
+    },
+    [uploadFile, toast]
+  );
+
+  const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
+    onDrop,
+    onDragEnter: () => setDragActive(true),
+    onDragLeave: () => setDragActive(false),
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'text/plain': ['.txt'],
+      'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+    },
+    maxFiles: 1,
+    disabled: isProcessing,
+  });
+
   return (
-    <div className={cn('w-full', className)}>
+    <div className="w-full">
       <div
-        className={cn(
-          'relative border-2 border-dashed rounded-lg p-6 md:p-8 text-center transition-all duration-200',
-          'hover:border-primary/50 hover:bg-primary/5',
-          dragActive && 'border-primary bg-primary/10',
-          isProcessing && 'pointer-events-none opacity-50',
-          'border-border'
-        )}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
+        {...getRootProps()}
+        className={`
+          relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+          transition-all duration-200 ease-in-out
+          ${isDragActive || dragActive
+            ? 'border-primary bg-primary/5 scale-[1.02]'
+            : 'border-border bg-background hover:border-primary/50 hover:bg-muted/50'
+          }
+          ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}
+        `}
       >
-        <input
-          type="file"
-          accept=".pdf,.docx,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg"
-          onChange={handleFileSelect}
-          disabled={isProcessing}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
+        <input {...getInputProps()} />
         
-        {selectedFile ? (
-          <div className="flex flex-col items-center space-y-4">
-            <div className="flex items-center space-x-3 bg-background rounded-lg p-4 shadow-sm border max-w-full">
-              {getFileIcon(selectedFile)}
-              <div className="flex-1 text-left min-w-0">
-                <p className="font-medium text-foreground truncate">{selectedFile.name}</p>
-                <p className="text-sm text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
-              </div>
-              <IconButton
-                icon={<X className="w-4 h-4" />}
-                onClick={clearFile}
-                disabled={isProcessing}
-                variant="ghost"
-                size="xs"
-                className="flex-shrink-0 hover:text-destructive"
-                aria-label="Remove file"
-              />
-            </div>
+        <div className="space-y-4">
+          <div className={`
+            w-16 h-16 mx-auto rounded-full flex items-center justify-center transition-colors
+            ${isDragActive || dragActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}
+          `}>
+            <Upload className="h-8 w-8" />
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-foreground">
+              {isDragActive ? 'Drop your file here' : 'Upload your document'}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              {isProcessing ? 'Processing...' : 'File ready for processing'}
+              Drag and drop your file here, or click to select
             </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            <Upload className="w-12 h-12 text-muted-foreground mx-auto" />
-            <div>
-              <p className="text-lg md:text-xl font-medium text-foreground">
-                Drop your document here
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                or click to browse files
-              </p>
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Supports: PDF, DOCX, XLSX, PPT, TXT, PNG, JPG (max 10MB)
+
+          <div className="flex flex-wrap justify-center gap-2 text-xs text-muted-foreground">
+            <span className="px-2 py-1 bg-muted rounded">PDF</span>
+            <span className="px-2 py-1 bg-muted rounded">DOCX</span>
+            <span className="px-2 py-1 bg-muted rounded">XLSX</span>
+            <span className="px-2 py-1 bg-muted rounded">PPTX</span>
+            <span className="px-2 py-1 bg-muted rounded">TXT</span>
+            <span className="px-2 py-1 bg-muted rounded">Images</span>
+          </div>
+
+          {!isDragActive && !isProcessing && (
+            <Button variant="outline" className="mt-4">
+              Choose File
+            </Button>
+          )}
+        </div>
+
+        {acceptedFiles.length > 0 && (
+          <div className="mt-6 p-4 bg-muted rounded-lg">
+            <div className="flex items-center gap-3">
+              {getFileIcon(acceptedFiles[0])}
+              <div className="text-left">
+                <p className="text-sm font-medium text-foreground">
+                  {acceptedFiles[0].name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {(acceptedFiles[0].size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+              <CheckCircle className="h-5 w-5 text-green-500 ml-auto" />
             </div>
           </div>
         )}
       </div>
+
+      <div className="mt-4 text-center">
+        <p className="text-xs text-muted-foreground">
+          Maximum file size: 50MB
+        </p>
+      </div>
     </div>
   );
-}
+};
+
+export default FileUpload;

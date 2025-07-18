@@ -1,194 +1,242 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { History, Search, Trash2, FileText, Calendar, HardDrive, X } from 'lucide-react';
-import { ParsedDocument } from '@/types/document';
-import { DocumentHistoryManager } from '@/lib/documentHistory';
-import { cn } from '@/lib/utils';
-import { Sidebar, SidebarHeader, SidebarTitle, SidebarContent, SidebarItem } from '@/components/ui/sidebar';
-import { IconButton } from '@/components/ui/icon-button';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { useUploadStore } from '@/hooks/useUploadStore';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  FileText, 
+  Image, 
+  FileSpreadsheet, 
+  Presentation, 
+  Clock,
+  MoreVertical,
+  Download,
+  Trash2
+} from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-interface DocumentHistoryProps {
-  onDocumentSelect: (document: ParsedDocument) => void;
-  selectedDocument: ParsedDocument | null;
-  className?: string;
+interface DocumentHistoryItem {
+  id: string;
+  filename: string;
+  file_type: string;
+  created_at: string;
+  processed: boolean;
 }
 
-export function DocumentHistory({ 
-  onDocumentSelect, 
-  selectedDocument, 
-  className 
-}: DocumentHistoryProps) {
-  const [documents, setDocuments] = useState<ParsedDocument[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredDocuments, setFilteredDocuments] = useState<ParsedDocument[]>([]);
+const DocumentHistory: React.FC = () => {
+  const { setSelectedDocument, selectedDocument } = useUploadStore();
+  const { toast } = useToast();
 
-  useEffect(() => {
-    const historyManager = DocumentHistoryManager.getInstance();
-    const loadDocuments = () => {
-      const docs = historyManager.getDocuments();
-      setDocuments(docs);
-      setFilteredDocuments(docs);
-    };
+  const { data: documents, isLoading, error } = useQuery({
+    queryKey: ['document-history'],
+    queryFn: async (): Promise<DocumentHistoryItem[]> => {
+      const response = await fetch('/api/history');
+      if (!response.ok) {
+        throw new Error('Failed to fetch document history');
+      }
+      return response.json();
+    },
+    refetchInterval: 5000,
+  });
 
-    loadDocuments();
-    // Set up a periodic refresh to catch changes from other components
-    const interval = setInterval(loadDocuments, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (searchTerm) {
-      const historyManager = DocumentHistoryManager.getInstance();
-      const filtered = historyManager.searchDocuments(searchTerm);
-      setFilteredDocuments(filtered);
-    } else {
-      setFilteredDocuments(documents);
+  const getFileIcon = (fileType: string) => {
+    switch (fileType.toLowerCase()) {
+      case 'pdf':
+        return <FileText className="h-4 w-4 text-red-500" />;
+      case 'docx':
+        return <FileText className="h-4 w-4 text-blue-500" />;
+      case 'xlsx':
+        return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+      case 'pptx':
+        return <Presentation className="h-4 w-4 text-orange-500" />;
+      case 'txt':
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif':
+        return <Image className="h-4 w-4 text-purple-500" />;
+      default:
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
     }
-  }, [searchTerm, documents]);
-
-  const handleRemoveDocument = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const historyManager = DocumentHistoryManager.getInstance();
-    historyManager.removeDocument(id);
-    setDocuments(prev => prev.filter(doc => doc.id !== id));
   };
 
-  const handleClearHistory = () => {
-    const historyManager = DocumentHistoryManager.getInstance();
-    historyManager.clearHistory();
-    setDocuments([]);
-    setFilteredDocuments([]);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   };
 
-  const clearSearch = () => {
-    setSearchTerm('');
+  const handleDocumentClick = async (doc: DocumentHistoryItem) => {
+    try {
+      const response = await fetch(`/api/process?document_id=${doc.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
+      const documentData = await response.json();
+      setSelectedDocument(documentData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load document",
+        variant: "destructive",
+      });
+    }
   };
 
-  const formatDate = (date: Date | string): string => {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleDownload = async (doc: DocumentHistoryItem) => {
+    try {
+      const response = await fetch(`/api/export?document_id=${doc.id}&format=markdown`);
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${doc.filename.split('.')[0]}.md`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download document",
+        variant: "destructive",
+      });
+    }
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-3">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="animate-pulse">
+            <div className="h-16 bg-muted rounded-lg"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
-  const getFileIcon = (type: string): React.ReactNode => {
-    if (type.includes('pdf')) return <FileText className="w-4 h-4 text-red-500" />;
-    if (type.includes('word') || type.includes('document')) return <FileText className="w-4 h-4 text-blue-500" />;
-    if (type.includes('sheet') || type.includes('excel')) return <FileText className="w-4 h-4 text-green-500" />;
-    if (type.includes('presentation')) return <FileText className="w-4 h-4 text-orange-500" />;
-    if (type.includes('image')) return <FileText className="w-4 h-4 text-purple-500" />;
-    return <FileText className="w-4 h-4 text-muted-foreground" />;
-  };
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <div className="text-sm text-muted-foreground">
+          Failed to load document history
+        </div>
+      </div>
+    );
+  }
+
+  if (!documents || documents.length === 0) {
+    return (
+      <div className="p-4 text-center space-y-3">
+        <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center">
+          <Clock className="h-6 w-6 text-muted-foreground" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">No documents yet</p>
+          <p className="text-xs text-muted-foreground">
+            Upload your first document to get started
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Sidebar className={className}>
-      <SidebarHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <History className="w-5 h-5 text-muted-foreground" />
-            <SidebarTitle>History</SidebarTitle>
-          </div>
-          {documents.length > 0 && (
-            <button
-              onClick={handleClearHistory}
-              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-            >
-              Clear All
-            </button>
-          )}
-        </div>
-        
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search documents..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-ring focus:border-transparent text-sm"
-          />
-          {searchTerm && (
-            <IconButton
-              icon={<X className="w-4 h-4" />}
-              onClick={clearSearch}
-              variant="ghost"
-              size="xs"
-              className="absolute right-1 top-1/2 transform -translate-y-1/2"
-              aria-label="Clear search"
-            />
-          )}
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        {filteredDocuments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-            <History className="w-12 h-12 mb-4 text-muted-foreground/50" />
-            <p className="text-center">
-              {searchTerm ? 'No documents found' : 'No documents yet'}
-            </p>
-            <p className="text-sm text-center mt-1">
-              {searchTerm ? 'Try a different search term' : 'Upload a document to get started'}
-            </p>
-          </div>
-        ) : (
-          <div className="p-2">
-            {filteredDocuments.map((document) => (
-              <SidebarItem
-                key={document.id}
-                active={selectedDocument?.id === document.id}
-                onClick={() => onDocumentSelect(document)}
-                className="group flex items-start space-x-3 mb-2"
-              >
-                <div className="flex-shrink-0 mt-1">
-                  {getFileIcon(document.metadata.type)}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate text-sm">
-                    {document.metadata.name}
+    <div className="p-3 space-y-2">
+      {documents.map((doc) => (
+        <div
+          key={doc.id}
+          className={`
+            group relative p-3 rounded-lg border cursor-pointer transition-all duration-200
+            ${selectedDocument?.id === doc.id
+              ? 'bg-primary/10 border-primary shadow-sm'
+              : 'bg-background border-border hover:bg-muted/50 hover:border-border'
+            }
+          `}
+          onClick={() => handleDocumentClick(doc)}
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              {getFileIcon(doc.file_type)}
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {doc.filename}
                   </p>
-                  <div className="flex flex-col space-y-1 mt-1">
-                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                      <Calendar className="w-3 h-3" />
-                      <span>{formatDate(document.metadata.uploadDate)}</span>
-                    </div>
-                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                      <HardDrive className="w-3 h-3" />
-                      <span>{formatFileSize(document.metadata.size)}</span>
-                    </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">
+                      {doc.file_type}
+                    </span>
+                    <span className="text-xs text-muted-foreground">•</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(doc.created_at)}
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {document.sections.length} sections
-                  </p>
                 </div>
                 
-                <IconButton
-                  icon={<Trash2 className="w-4 h-4" />}
-                  onClick={(e) => handleRemoveDocument(document.id, e)}
-                  variant="ghost"
-                  size="xs"
-                  className="opacity-0 group-hover:opacity-100 hover:text-destructive"
-                  aria-label="Remove document"
-                />
-              </SidebarItem>
-            ))}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreVertical className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(doc);
+                    }}>
+                      <Download className="h-3 w-3 mr-2" />
+                      Download
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="text-destructive"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Trash2 className="h-3 w-3 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {!doc.processed && (
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-orange-600">Processing...</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </SidebarContent>
-    </Sidebar>
+        </div>
+      ))}
+    </div>
   );
-}
+};
+
+export default DocumentHistory;

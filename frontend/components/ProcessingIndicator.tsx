@@ -1,150 +1,152 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { ParsingProgress } from '@/types/document';
-import { cn } from '@/lib/utils';
-import { useSocketProgress } from '@/hooks/useSocketProgress';
+import React from 'react';
+import { Progress } from '@/components/ui/progress';
+import { useUploadStore } from '@/hooks/useUploadStore';
+import { 
+  Upload, 
+  FileText, 
+  Brain, 
+  CheckCircle, 
+  Loader2 
+} from 'lucide-react';
 
-interface ProcessingIndicatorProps {
-  progress: ParsingProgress;
-  className?: string;
-}
+const ProcessingIndicator: React.FC = () => {
+  const { processingStage, processingProgress, isProcessing } = useUploadStore();
 
-export function ProcessingIndicator({ progress, className }: ProcessingIndicatorProps) {
-  const [displayedProgress, setDisplayedProgress] = useState(0);
-  const [currentProgress, setCurrentProgress] = useState(progress);
-
-  // Use Socket.IO hook for real-time updates
-  const { lastProgress, isConnected } = useSocketProgress({
-    documentId: progress.documentId,
-    onProgress: (data) => {
-      setCurrentProgress(data);
-      setDisplayedProgress(data.progress);
+  const stages = [
+    { 
+      key: 'uploading', 
+      icon: Upload, 
+      label: 'Uploading file', 
+      description: 'Transferring your document securely'
     },
-    autoConnect: !!progress.documentId
-  });
-
-  useEffect(() => {
-    if (!progress.documentId || !isConnected) {
-      // Fallback to smooth progress animation if no documentId or not connected
-      const interval = setInterval(() => {
-        setDisplayedProgress(prev => {
-          const diff = progress.progress - prev;
-          if (Math.abs(diff) < 1) {
-            clearInterval(interval);
-            return progress.progress;
-          }
-          return prev + diff * 0.1;
-        });
-      }, 50);
-      return () => clearInterval(interval);
+    { 
+      key: 'parsing', 
+      icon: FileText, 
+      label: 'Parsing document', 
+      description: 'Extracting content and structure'
+    },
+    { 
+      key: 'ai_processing', 
+      icon: Brain, 
+      label: 'AI processing', 
+      description: 'Analyzing content with AI'
+    },
+    { 
+      key: 'generating_markdown', 
+      icon: FileText, 
+      label: 'Generating markdown', 
+      description: 'Creating formatted output'
+    },
+    { 
+      key: 'complete', 
+      icon: CheckCircle, 
+      label: 'Complete', 
+      description: 'Processing finished successfully'
     }
-  }, [progress.progress, progress.documentId, isConnected]);
+  ];
 
-  // Use real-time progress if available, otherwise use prop progress
-  const activeProgress = lastProgress || currentProgress;
+  const currentStageIndex = stages.findIndex(stage => stage.key === processingStage);
+  const progress = processingProgress || 0;
 
-  const getStageIcon = () => {
-    switch (activeProgress.stage) {
-      case 'complete':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'uploading':
-      case 'parsing':
-      case 'converting':
-        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
-      default:
-        return <XCircle className="w-5 h-5 text-red-500" />;
-    }
-  };
-
-  const getStageColor = () => {
-    switch (activeProgress.stage) {
-      case 'complete':
-        return 'bg-green-500';
-      case 'uploading':
-        return 'bg-blue-500';
-      case 'parsing':
-        return 'bg-yellow-500';
-      case 'converting':
-        return 'bg-purple-500';
-      default:
-        return 'bg-muted-foreground';
-    }
-  };
-
-  const getStageText = () => {
-    switch (activeProgress.stage) {
-      case 'uploading':
-        return 'Uploading file...';
-      case 'parsing':
-        return 'Parsing document...';
-      case 'converting':
-        return 'Converting to markdown...';
-      case 'complete':
-        return 'Processing complete!';
-      default:
-        return 'Processing...';
-    }
-  };
+  if (!isProcessing && processingStage !== 'complete') {
+    return null;
+  }
 
   return (
-    <div className={cn('bg-background rounded-lg border border-border p-6 shadow-sm', className)}>
-      <div className="flex items-center space-x-4 mb-4">
-        {getStageIcon()}
-        <div className="flex-1">
-          <h3 className="font-medium text-foreground">{getStageText()}</h3>
-          <p className="text-sm text-muted-foreground">{activeProgress.message}</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center space-y-2">
+        <div className="w-12 h-12 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+          <Loader2 className="h-6 w-6 text-primary animate-spin" />
         </div>
-      </div>
-      
-      {/* Progress Bar */}
-      <div className="relative">
-        <div className="w-full bg-muted rounded-full h-2">
-          <div
-            className={cn(
-              'h-2 rounded-full transition-all duration-300 ease-out',
-              getStageColor()
-            )}
-            style={{ width: `${displayedProgress}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>0%</span>
-          <span className="font-medium">{Math.round(displayedProgress)}%</span>
-          <span>100%</span>
-        </div>
+        <h3 className="text-lg font-semibold text-foreground">
+          Processing Document
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Please wait while we convert your document
+        </p>
       </div>
 
-      {/* Stage Indicators */}
-      <div className="flex justify-between mt-4">
-        {[
-          { key: 'uploading', label: 'Upload' },
-          { key: 'parsing', label: 'Parse' },
-          { key: 'converting', label: 'Convert' },
-          { key: 'complete', label: 'Complete' }
-        ].map((stage, index) => (
-          <div
-            key={stage.key}
-            className={cn(
-              'flex flex-col items-center space-y-1',
-              activeProgress.stage === stage.key ? 'text-primary' : 'text-muted-foreground'
-            )}
-          >
-            <div
-              className={cn(
-                'w-3 h-3 rounded-full border-2 transition-colors',
-                activeProgress.stage === stage.key 
-                  ? 'border-primary bg-primary' 
-                  : index < ['uploading', 'parsing', 'converting', 'complete'].indexOf(activeProgress.stage)
-                  ? 'border-green-500 bg-green-500'
-                  : 'border-border bg-background'
-              )}
-            />
-            <span className="text-xs font-medium">{stage.label}</span>
-          </div>
-        ))}
+      {/* Progress Bar */}
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Progress</span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <Progress value={progress} className="h-2" />
       </div>
+
+      {/* Stages */}
+      <div className="space-y-3">
+        {stages.map((stage, index) => {
+          const Icon = stage.icon;
+          const isActive = index === currentStageIndex;
+          const isCompleted = index < currentStageIndex;
+          const isCurrent = processingStage === stage.key;
+
+          return (
+            <div
+              key={stage.key}
+              className={`
+                flex items-start gap-3 p-3 rounded-lg transition-all duration-200
+                ${isActive || isCurrent 
+                  ? 'bg-primary/5 border border-primary/20' 
+                  : isCompleted 
+                    ? 'bg-muted/50' 
+                    : 'opacity-50'
+                }
+              `}
+            >
+              <div className={`
+                flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors
+                ${isActive || isCurrent
+                  ? 'bg-primary text-primary-foreground'
+                  : isCompleted
+                    ? 'bg-green-500 text-white'
+                    : 'bg-muted text-muted-foreground'
+                }
+              `}>
+                {isCompleted ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : isActive || isCurrent ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Icon className="h-4 w-4" />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className={`
+                  text-sm font-medium
+                  ${isActive || isCurrent || isCompleted 
+                    ? 'text-foreground' 
+                    : 'text-muted-foreground'
+                  }
+                `}>
+                  {stage.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {stage.description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Current Stage Detail */}
+      {processingStage && (
+        <div className="text-center p-3 bg-muted/30 rounded-lg">
+          <p className="text-xs text-muted-foreground">
+            Current: {stages.find(s => s.key === processingStage)?.label || processingStage}
+          </p>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default ProcessingIndicator;
