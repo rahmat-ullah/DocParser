@@ -30,6 +30,7 @@ class HierarchicalNode(BaseModel):
     order: int = 0  # Order within parent
     bbox: Optional[Dict[str, float]] = None  # Bounding box coordinates
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    spatial_context: Optional[Dict[str, Any]] = None
 
 
 class TextBlock(HierarchicalNode):

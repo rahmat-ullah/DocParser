@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db, check_db_connection
-from app.services.ai_service import get_ai_service
+from app.services.enhanced_ai_service import get_enhanced_ai_service
 from app.schemas.common import HealthCheck
 
 
@@ -33,8 +33,8 @@ async def detailed_health_check(db: AsyncSession = Depends(get_db)):
     # Check database connection
     db_healthy = await check_db_connection()
     
-    # Check AI service
-    ai_service = await get_ai_service()
+    # Check enhanced AI service
+    ai_service = await get_enhanced_ai_service()
     ai_status = await ai_service.health_check()
     
     return {

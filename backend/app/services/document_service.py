@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.document import Document
 from app.core.config import get_settings
-from app.services.ai_service import get_ai_service
+from app.services.enhanced_ai_service import get_enhanced_ai_service
 
 
 settings = get_settings()
@@ -219,9 +219,34 @@ class DocumentService:
             import base64
             base64_content = base64.b64encode(file_content).decode('utf-8')
             
-            # Get AI service and process
-            ai_service = await get_ai_service()
-            description = await ai_service.describe_image(base64_content)
+            # Get enhanced AI service and process
+            ai_service = await get_enhanced_ai_service()
+            context = {
+                "filename": document.original_filename or document.filename, 
+                "page": 1, 
+                "section": "",
+                "file_type": document.file_type
+            }
+            
+            # Analyze with enhanced AI service
+            enhanced_metadata = await ai_service.analyze_image_with_context(base64_content, context)
+            
+            # Extract description from enhanced metadata
+            description = ""
+            if isinstance(enhanced_metadata, dict):
+                description = enhanced_metadata.get('description', '') or \
+                             enhanced_metadata.get('contextual_summary', '') or \
+                             enhanced_metadata.get('aiAnnotations', {}).get('explanationGenerated', '')
+                
+                # If no description found, try OCR text
+                if not description:
+                    ocr_text = enhanced_metadata.get('aiAnnotations', {}).get('ocrText', '')
+                    if ocr_text:
+                        description = f"Text found in document: {ocr_text[:500]}{'...' if len(ocr_text) > 500 else ''}"
+                    else:
+                        description = "Document processed with enhanced AI analysis"
+            else:
+                description = str(enhanced_metadata)
             
             # Update document with results
             await self.update_document(

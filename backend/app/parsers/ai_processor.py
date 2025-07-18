@@ -303,7 +303,7 @@ class AIProcessor:
                 )
                 
                 # Add spatial context to text block
-                if not hasattr(text_block, 'spatial_context'):
+                if text_block.spatial_context is None:
                     text_block.spatial_context = {}
                 
                 text_block.spatial_context.update({
@@ -323,7 +323,7 @@ class AIProcessor:
                 )
                 
                 # Add spatial context to image block
-                if not hasattr(image_block, 'spatial_context'):
+                if image_block.spatial_context is None:
                     image_block.spatial_context = {}
                 
                 image_block.spatial_context.update({
@@ -343,7 +343,7 @@ class AIProcessor:
                 )
                 
                 # Add spatial context to table block
-                if not hasattr(table_block, 'spatial_context'):
+                if table_block.spatial_context is None:
                     table_block.spatial_context = {}
                 
                 table_block.spatial_context.update({
@@ -607,7 +607,7 @@ class AIProcessor:
         if not ast.images:
             return
 
-        ai_service = await get_ai_service()
+        ai_service = await get_enhanced_ai_service()
         
         # Determine total steps for progress: 1 for description, 1 for table extraction (if enabled) per image
         total_image_processing_steps = len(ast.images)
@@ -740,7 +740,12 @@ class AIProcessor:
             "index": image.index if image.index is not None else 0 # Ensure index is not None
         }
 
-        metadata = await ai_service.analyze_image_structured(image.data, context)
+        # Use enhanced AI service with context
+        if hasattr(ai_service, 'analyze_image_with_context'):
+            metadata = await ai_service.analyze_image_with_context(image.data, context)
+        else:
+            # Fallback to basic method if enhanced method not available
+            metadata = await ai_service.analyze_image_structured(image.data, context)
 
         if hasattr(image, 'metadata'): # Should always be true for ImageBlock
             image.metadata = metadata

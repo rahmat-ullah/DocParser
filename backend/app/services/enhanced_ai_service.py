@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import re
+from datetime import datetime
+import os
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
@@ -200,11 +202,11 @@ class EnhancedAIService(AIService):
         try:
             if self.config.get("use_structured_outputs", False):
                 return await self._analyze_with_structured_output(
-                    base64_img, system_prompt, context_msg, model
+                    base64_img, system_prompt, context_msg, model, context
                 )
             else:
                 return await self._analyze_with_json_mode(
-                    base64_img, system_prompt, context_msg, model
+                    base64_img, system_prompt, context_msg, model, context
                 )
                 
         except Exception as e:
@@ -294,14 +296,38 @@ class EnhancedAIService(AIService):
         
         return base_context
     
+    def _log_llm_response(self, content: str, model: str, mode: str, context_msg: str) -> None:
+        """Log the LLM raw response to a file with additional metadata and context."""
+        log_dir = "logs"
+        os.makedirs(log_dir, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        filename = f"llm_response_{timestamp}_{mode}.log"
+        filepath = os.path.join(log_dir, filename)
+        
+        with open(filepath, "w", encoding="utf-8") as log_file:
+            log_file.write(f"Model: {model}\n")
+            log_file.write(f"Mode: {mode}\n")
+            log_file.write(f"Timestamp: {timestamp}\n")
+            log_file.write(f"Context: {context_msg}\n")
+            log_file.write("="*50 + "\n")
+            log_file.write("Response:\n")
+            log_file.write(content)
+    
     async def _analyze_with_structured_output(
         self, 
         base64_img: str, 
         system_prompt: str, 
         context_msg: str, 
-        model: str
+        model: str,
+        context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Analyze image using structured outputs (if supported)."""
+        # Generate context-aware ID
+        filename = context.get('filename', 'unknown')
+        page = context.get('page', 1)
+        section = context.get('section', '')
+        figure_id = f"fig_{page}_{abs(hash(filename))}"
+        
         enhanced_prompt = f"""
         {system_prompt}
 
@@ -353,7 +379,7 @@ class EnhancedAIService(AIService):
         
         Provide response in JSON format with the following structure:
         {{
-            "id": "fig_{context.get('page', 1)}_{hash(context.get('filename', 'unknown'))}",
+            "id": "{figure_id}",
             "type": "diagram|chart|table|image|formula",
             "title": "Specific descriptive title (not generic)",
             "caption": "Detailed caption explaining the visual content",
@@ -372,9 +398,9 @@ class EnhancedAIService(AIService):
             }},
             "confidence_score": 0.85,
             "source": {{
-                "filename": "{context.get('filename', '')}",
-                "page": {context.get('page', 0)},
-                "documentSection": "{context.get('section', '')}"
+                "filename": "{filename}",
+                "page": {page},
+                "documentSection": "{section}"
             }},
             "location": {{"x": 0, "y": 0, "width": 0, "height": 0}},
             "textReferences": [],
@@ -414,6 +440,10 @@ class EnhancedAIService(AIService):
         )
         
         content = response.choices[0].message.content
+        
+        # Log LLM raw response with metadata
+        self._log_llm_response(content, model, "structured_output", context_msg)
+
         return json.loads(content)
     
     async def _analyze_with_json_mode(
@@ -421,9 +451,16 @@ class EnhancedAIService(AIService):
         base64_img: str, 
         system_prompt: str, 
         context_msg: str, 
-        model: str
+        model: str,
+        context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Analyze image using JSON mode with canonical markdown format support."""
+        # Generate context-aware ID
+        filename = context.get('filename', 'unknown')
+        page = context.get('page', 1)
+        section = context.get('section', '')
+        figure_id = f"fig_{page}_{abs(hash(filename))}"
+        
         enhanced_prompt = f"""
         {system_prompt}
 
@@ -475,7 +512,7 @@ class EnhancedAIService(AIService):
         
         Provide response in JSON format with the following structure:
         {{
-            "id": "fig_{context.get('page', 1)}_{hash(context.get('filename', 'unknown'))}",
+            "id": "{figure_id}",
             "type": "diagram|chart|table|image|formula",
             "title": "Specific descriptive title (not generic)",
             "caption": "Detailed caption explaining the visual content",
@@ -494,9 +531,9 @@ class EnhancedAIService(AIService):
             }},
             "confidence_score": 0.85,
             "source": {{
-                "filename": "{context.get('filename', '')}",
-                "page": {context.get('page', 0)},
-                "documentSection": "{context.get('section', '')}"
+                "filename": "{filename}",
+                "page": {page},
+                "documentSection": "{section}"
             }},
             "location": {{"x": 0, "y": 0, "width": 0, "height": 0}},
             "textReferences": [],
@@ -535,6 +572,9 @@ class EnhancedAIService(AIService):
         )
         
         content = response.choices[0].message.content
+        
+        # Log LLM raw response with metadata
+        self._log_llm_response(content, model, "json_mode", context_msg)
         
         # Extract JSON from response
         try:
