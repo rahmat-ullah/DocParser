@@ -11,3 +11,15 @@ build = ["sh", "-c", "make"]
 [[ports]]
 localPort = 3000
 externalPort = 80
+
+[workflows]
+runButton = "Run Frontend"
+
+[[workflows.workflow]]
+name = "Run Frontend"
+author = 37000531
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm run dev"
