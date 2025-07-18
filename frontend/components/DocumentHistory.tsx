@@ -30,15 +30,14 @@ const DocumentHistory: React.FC = () => {
   const { setSelectedDocument, selectedDocument } = useUploadStore();
   const { toast } = useToast();
 
-  const { data: documents = [], isLoading, error } = useQuery({
+  const { data: documents, isLoading, error } = useQuery({
     queryKey: ['document-history'],
     queryFn: async (): Promise<DocumentHistoryItem[]> => {
       const response = await fetch('/api/history');
       if (!response.ok) {
         throw new Error('Failed to fetch document history');
       }
-      const data = await response.json();
-      return Array.isArray(data) ? data : [];
+      return response.json();
     },
     refetchInterval: 5000,
   });
@@ -142,7 +141,7 @@ const DocumentHistory: React.FC = () => {
     );
   }
 
-  if (!documents || !Array.isArray(documents) || documents.length === 0) {
+  if (!documents || documents.length === 0) {
     return (
       <div className="p-4 text-center space-y-3">
         <div className="w-12 h-12 mx-auto bg-muted rounded-full flex items-center justify-center">

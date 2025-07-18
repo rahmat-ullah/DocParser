@@ -114,7 +114,7 @@ export function DocumentViewer({
             </span>
           )}
         </div>
-
+        
         {/* Controls */}
         <div className="flex items-center space-x-2">
           <IconButton
@@ -123,7 +123,7 @@ export function DocumentViewer({
             variant={showSearch ? 'default' : 'ghost'}
             aria-label="Toggle search"
           />
-
+          
           {/* Zoom Controls */}
           <div className="flex items-center space-x-1 border border-border rounded-lg">
             <IconButton
@@ -181,5 +181,3 @@ export function DocumentViewer({
     </Panel>
   );
 }
-export { DocumentViewer };
-export default DocumentViewer;
