@@ -3,6 +3,11 @@ compile = "make"
 
 [nix]
 channel = "stable-24_05"
+packages = ["libxcrypt", "tesseract"]
 
 [deployment]
 build = ["sh", "-c", "make"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
