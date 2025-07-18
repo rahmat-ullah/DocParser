@@ -32,9 +32,9 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#1a237e" />
         <meta name="msapplication-tap-highlight" content="no" />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} h-full overflow-hidden`}>
         <QueryProvider>
-          <div id="root">{children}</div>
+          <div id="root" className="h-full overflow-hidden">{children}</div>
         </QueryProvider>
       </body>
     </html>
