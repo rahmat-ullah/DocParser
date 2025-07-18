@@ -13,6 +13,7 @@ from ..parsers.markdown_generator import MarkdownGenerator
 from ..parsers.ast_models import DocumentAST, ParseProgress
 from .progress_emitter import emit_document_progress
 from ..core.config import settings
+from ..utils.advanced_table_extractor import TableExtractionConfig
 
 
 class DocumentProcessor:
@@ -25,12 +26,28 @@ class DocumentProcessor:
         self.parser_factory = ParserFactory()
         self.ai_processor = AIProcessor()
         self.markdown_generator = MarkdownGenerator()
+        
+        # Configure advanced table extraction based on settings
+        self.table_extraction_config = TableExtractionConfig()
+        
+        # Apply settings to config
+        self.table_extraction_config.min_confidence_score = settings.table_extraction_quality_threshold
+        self.table_extraction_config.iou_threshold = settings.table_extraction_iou_threshold
+        self.table_extraction_config.max_empty_cell_ratio = settings.table_extraction_max_empty_cell_ratio
+        self.table_extraction_config.min_row_count = settings.table_extraction_min_rows
+        self.table_extraction_config.min_column_count = settings.table_extraction_min_columns
+        self.table_extraction_config.gmft_detection_threshold = settings.gmft_detection_threshold
+        self.table_extraction_config.pdfplumber_repair_enabled = settings.pdfplumber_repair_enabled
+        
+        # Store extraction method availability
+        self.enable_advanced_table_extraction = settings.enable_advanced_table_extraction
 
     async def process_document(
         self, 
         file_path: Path, 
         document_id: str,
-        enable_ai_processing: bool = True
+        enable_ai_processing: bool = True,
+        enable_advanced_table_extraction: bool = True
     ) -> AsyncGenerator[ParseProgress, None]:
         """
         Process a document through the complete pipeline.
@@ -57,6 +74,11 @@ class DocumentProcessor:
 
             # Get appropriate parser
             parser = self.parser_factory.get_parser(file_path)
+            
+            # Configure advanced table extraction for PDF parser
+            if hasattr(parser, 'table_config') and enable_advanced_table_extraction and self.enable_advanced_table_extraction:
+                parser.table_config = self.table_extraction_config
+                parser.use_advanced_table_extraction = enable_advanced_table_extraction
             
             # Stage 2: Parse document
             progress = ParseProgress(
@@ -169,12 +191,13 @@ class DocumentProcessor:
         """
         return {
             "supported_extensions": self.parser_factory.get_supported_extensions(),
-            "capabilities": {
-                "text_extraction": True,
-                "image_extraction": True,
-                "table_extraction": True,
-                "math_extraction": True,
-                "ai_enhancement": True,
-                "markdown_output": True
-            }
+                "capabilities": {
+                    "text_extraction": True,
+                    "image_extraction": True,
+                    "table_extraction": True,
+                    "advanced_table_extraction": True,
+                    "math_extraction": True,
+                    "ai_enhancement": True,
+                    "markdown_output": True
+                }
         }

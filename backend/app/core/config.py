@@ -49,6 +49,19 @@ class Settings(BaseSettings):
     # extract_tables_from_images_enabled: bool = Field(default=True, description="Enable table extraction from images using OCR+LLM (can be slow)")
     ai_processor_image_batch_size: int = Field(default=3, description="Batch size for concurrent image processing in AIProcessor")
     
+    # Advanced table extraction settings
+    enable_advanced_table_extraction: bool = Field(default=True, description="Enable advanced table extraction using Camelot, pdfplumber, and GMFT")
+    table_extraction_quality_threshold: float = Field(default=0.3, description="Minimum confidence score for table extraction")
+    table_extraction_iou_threshold: float = Field(default=0.6, description="IoU threshold for table deduplication")
+    table_extraction_max_empty_cell_ratio: float = Field(default=0.7, description="Maximum ratio of empty cells in extracted tables")
+    table_extraction_min_rows: int = Field(default=2, description="Minimum number of rows for valid tables")
+    table_extraction_min_columns: int = Field(default=2, description="Minimum number of columns for valid tables")
+    camelot_lattice_enabled: bool = Field(default=True, description="Enable Camelot lattice flavor for table extraction")
+    camelot_stream_enabled: bool = Field(default=True, description="Enable Camelot stream flavor for table extraction")
+    gmft_enabled: bool = Field(default=True, description="Enable GMFT (deep learning) table extraction")
+    gmft_detection_threshold: float = Field(default=0.5, description="GMFT detection confidence threshold")
+    pdfplumber_repair_enabled: bool = Field(default=True, description="Enable pdfplumber text repair for tables")
+    
     # CORS settings
     cors_origins: str = Field(
         default="http://localhost:3000,http://localhost:3001", 

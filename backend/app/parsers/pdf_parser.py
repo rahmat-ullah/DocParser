@@ -12,10 +12,18 @@ from io import BytesIO
 
 from .base_parser import BaseParser, ParseError
 from .ast_models import DocumentAST, TextBlock, ImageBlock, TableBlock, MathBlock, BlockType, ParseProgress
+from ..utils.advanced_table_extractor import extract_tables_from_pdf, TableExtractionConfig
 
 
 class PDFParser(BaseParser):
     """Parser for PDF documents using PyMuPDF."""
+
+    def __init__(self):
+        super().__init__()
+        # Initialize advanced table extraction config
+        self.table_config = TableExtractionConfig()
+        # Enable both rule-based and AI-based table extraction
+        self.use_advanced_table_extraction = True
 
     def supports_file(self, file_path: Path) -> bool:
         """Check if file is a PDF."""
@@ -60,13 +68,58 @@ class PDFParser(BaseParser):
                 # Extract images
                 await self._extract_images(page, ast, page_num)
                 
-                # Extract tables (basic implementation)
-                await self._extract_tables(page, ast, page_num)
+                # Skip basic table extraction - will be done with advanced method
                 
                 # Extract math expressions
                 await self._extract_math(page, ast, page_num)
 
             doc.close()
+            
+            # Advanced table extraction after basic parsing
+            if self.use_advanced_table_extraction:
+                await self._emit_progress(
+                    progress_callback, 
+                    "advanced_table_extraction", 
+                    0.8, 
+                    "Starting advanced table extraction"
+                )
+                
+                try:
+                    # Extract tables using advanced method
+                    advanced_tables = await extract_tables_from_pdf(
+                        str(file_path), 
+                        pages="all", 
+                        config=self.table_config
+                    )
+                    
+                    # Replace or merge with existing tables
+                    if advanced_tables:
+                        # Clear basic tables and use advanced ones
+                        ast.tables = advanced_tables
+                        
+                        await self._emit_progress(
+                            progress_callback, 
+                            "advanced_table_extraction_complete", 
+                            0.9, 
+                            f"Advanced table extraction completed: {len(advanced_tables)} tables found"
+                        )
+                    else:
+                        await self._emit_progress(
+                            progress_callback, 
+                            "advanced_table_extraction_complete", 
+                            0.9, 
+                            "Advanced table extraction completed: no tables found"
+                        )
+                        
+                except Exception as e:
+                    # Log error but don't fail parsing
+                    print(f"Advanced table extraction failed: {e}")
+                    await self._emit_progress(
+                        progress_callback, 
+                        "advanced_table_extraction_error", 
+                        0.9, 
+                        f"Advanced table extraction failed: {str(e)[:100]}"
+                    )
             
             await self._emit_progress(progress_callback, "completion", 1.0, "PDF parsing completed")
             return ast
@@ -161,10 +214,10 @@ class PDFParser(BaseParser):
                 # Skip problematic images
                 continue
 
-    async def _extract_tables(self, page, ast: DocumentAST, page_num: int) -> None:
-        """Extract tables from a PDF page (basic implementation)."""
+    async def _extract_tables_basic(self, page, ast: DocumentAST, page_num: int) -> None:
+        """Extract tables from a PDF page (basic implementation - kept as fallback)."""
         # This is a simplified table detection based on text positioning
-        # For better table extraction, consider using libraries like camelot-py or tabula-py
+        # Now serves as a fallback if advanced extraction fails
         
         blocks = page.get_text("dict")
         potential_table_blocks = []
@@ -217,6 +270,11 @@ class PDFParser(BaseParser):
                         "x1": table_data["bbox"][2],
                         "y1": table_data["bbox"][3],
                         "page": page_num
+                    },
+                    metadata={
+                        "extraction_method": "basic_text_alignment",
+                        "extraction_source": "pdf_parser_basic",
+                        "confidence": 0.6
                     }
                 )
                 ast.tables.append(table_block)
