@@ -5,7 +5,7 @@ Combines all API route modules.
 
 from fastapi import APIRouter
 
-from .endpoints import documents, health, upload, processing, users, export, image_metadata
+from .endpoints import documents, health, upload, processing, users, export, image_metadata, pdf_viewer
 
 
 api_router = APIRouter()
@@ -18,3 +18,4 @@ api_router.include_router(processing.router, prefix="/processing", tags=["proces
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(export.router, prefix="/export", tags=["export"])
 api_router.include_router(image_metadata.router, prefix="/images", tags=["images"])
+api_router.include_router(pdf_viewer.router, prefix="/pdf", tags=["pdf"])
